@@ -12,6 +12,7 @@ from typing import Dict, Optional
 
 import click
 
+from acsdd import __version__
 from acsdd.capability.loader import iter_manifests, ManifestLoadError
 from acsdd.capability.validator import validate_manifest, validate_catalog
 from acsdd.catalog.builder import build_catalog_markdown
@@ -30,7 +31,7 @@ def _default_capabilities_dir() -> Path:
 
 
 @click.group()
-@click.version_option(package_name="acsdd")
+@click.version_option(version=__version__)
 def cli():
     """ACSDD — AI-Collaborative Software Development & Delivery CLI."""
 

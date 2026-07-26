@@ -1,0 +1,82 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux-x86_64
+          - os: ubuntu-24.04-arm
+            target: linux-arm64
+          - os: macos-14
+            target: darwin-arm64
+          - os: macos-13
+            target: darwin-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install pyinstaller
+
+      - name: Build binary
+        run: pyinstaller packaging/acsdd.spec --distpath dist --workpath build --clean --noconfirm
+
+      - name: Rename artifact
+        run: mv dist/acsdd dist/acsdd-${{ matrix.target }}
+
+      - name: Smoke test
+        run: |
+          chmod +x dist/acsdd-${{ matrix.target }}
+          ./dist/acsdd-${{ matrix.target }} --version
+          ./dist/acsdd-${{ matrix.target }} capability list --manifests-dir capabilities/_manifests
+          ./dist/acsdd-${{ matrix.target }} capability validate --manifests-dir capabilities/_manifests
+          ./dist/acsdd-${{ matrix.target }} catalog verify --capabilities-dir capabilities
+
+      - name: Checksum
+        run: shasum -a 256 dist/acsdd-${{ matrix.target }} > dist/acsdd-${{ matrix.target }}.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsdd-${{ matrix.target }}
+          path: |
+            dist/acsdd-${{ matrix.target }}
+            dist/acsdd-${{ matrix.target }}.sha256
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts and build aggregate checksums
+        run: |
+          mkdir -p release
+          find artifacts -type f -exec cp {} release/ \;
+          cd release && sha256sum acsdd-* > acsdd-checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true

@@ -11,8 +11,29 @@ below can be run immediately against something real.
 
 ## Install
 
+### Quick install (recommended)
+
+No Python required — this downloads a self-contained binary from
+[GitHub Releases](https://github.com/JaimeSanchez/acsdd_cli/releases) and
+installs it to `~/.local/bin` (no sudo needed):
+
 ```bash
-pip install -e .
+curl -fsSL https://raw.githubusercontent.com/JaimeSanchez/acsdd_cli/main/install.sh | sh
+```
+
+To pin a specific version instead of installing latest:
+
+```bash
+ACSDD_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/JaimeSanchez/acsdd_cli/main/install.sh | sh
+```
+
+Binaries are built for Linux and macOS on x86_64 and arm64. Windows isn't
+supported yet.
+
+### From source (contributors / development)
+
+```bash
+pip install -e ".[dev]"
 ```
 
 Requires Python 3.10+. Installs the `acsdd` command on your PATH.
@@ -72,6 +93,9 @@ Profile YAML, a discovery report, and a recommendations doc.
 acsdd-cli/
 ├── pyproject.toml
 ├── README.md
+├── install.sh                     # curl-installer, see Install above
+├── packaging/                     # PyInstaller entry point + spec for release binaries
+├── .github/workflows/release.yml  # builds + publishes binaries on a version tag
 ├── src/acsdd/
 │   ├── cli.py                     # click commands
 │   ├── schemas/                   # Appendix A & B JSON Schemas
@@ -85,6 +109,19 @@ acsdd-cli/
     │   ├── DB-001.yaml .. DB-004.yaml
     └── database/
         └── *.md                   # human/AI-readable procedure docs
+```
+
+## Building the standalone binary
+
+Maintainers cutting a release don't need to do this by hand — pushing a
+`vX.Y.Z` tag triggers `.github/workflows/release.yml`, which builds and
+publishes binaries for linux/macOS (x86_64 + arm64) automatically. To build
+one locally for testing:
+
+```bash
+pip install . pyinstaller
+pyinstaller packaging/acsdd.spec --distpath dist --workpath build --clean
+./dist/acsdd --version
 ```
 
 ## Running tests
