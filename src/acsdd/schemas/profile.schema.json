@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ACSDD Engineering Profile",
+  "type": "object",
+  "required": ["profile"],
+  "properties": {
+    "profile": {
+      "type": "object",
+      "required": ["meta", "technology_stack", "engineering_standards", "ai_execution_rules"],
+      "properties": {
+        "meta": {
+          "type": "object",
+          "required": ["id", "version"],
+          "properties": {
+            "id": { "type": "string" },
+            "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+            "last_updated": { "type": "string", "format": "date" }
+          }
+        },
+        "technology_stack": {
+          "type": "object",
+          "properties": {
+            "language": { "type": "string" },
+            "version": { "type": "string" },
+            "framework": { "type": "string" },
+            "orm": { "type": "string" },
+            "frontend": { "type": "string" },
+            "additional": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "version": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "engineering_standards": {
+          "type": "object",
+          "properties": {
+            "code_style": { "type": "string" },
+            "static_analysis": { "type": "string" },
+            "test_framework": { "type": "string" },
+            "min_coverage": { "type": "integer", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "capability_configuration": {
+          "type": "object",
+          "properties": {
+            "default_adapter": { "type": "string" },
+            "overrides": {
+              "type": "object",
+              "additionalProperties": { "type": "object" }
+            }
+          }
+        },
+        "ai_execution_rules": {
+          "type": "object",
+          "properties": {
+            "max_files_per_session": { "type": "integer", "minimum": 1, "default": 3 },
+            "max_loc_per_session": { "type": "integer", "minimum": 1, "default": 200 },
+            "require_human_approval": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["database-schema-change", "api-contract-change", "security-related-change"]
+            }
+          }
+        },
+        "context_priority": {
+          "type": "object",
+          "properties": {
+            "tiers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "tier": { "type": "integer" },
+                  "content": { "type": "string" },
+                  "max_tokens": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "quality_gates": {
+          "type": "object",
+          "properties": {
+            "automatic": { "type": "array", "items": { "type": "string" } },
+            "manual": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "security_profile": {
+          "type": "object",
+          "properties": {
+            "cross_cutting_constraints": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "enforcement": {
+                    "type": "string",
+                    "enum": ["automatic", "manual", "automatic_and_manual"]
+                  },
+                  "tool": { "type": "string" },
+                  "rule": { "type": "string" }
+                }
+              }
+            },
+            "mandatory_human_reviews": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "repository_health": {
+          "type": "object",
+          "properties": {
+            "current_coverage": { "type": "integer" },
+            "tech_debt_score": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+            "last_audit": { "type": "string", "format": "date" }
+          }
+        },
+        "token_budgets": {
+          "type": "object",
+          "properties": {
+            "planning_phase": { "type": "integer", "default": 4000 },
+            "implementation_phase": { "type": "integer", "default": 8000 },
+            "validation_phase": { "type": "integer", "default": 2000 },
+            "max_total_per_session": { "type": "integer", "default": 15000 }
+          }
+        }
+      }
+    }
+  }
+}

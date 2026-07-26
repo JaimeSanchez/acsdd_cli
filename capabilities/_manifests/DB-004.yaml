@@ -1,0 +1,69 @@
+capability:
+  id: "DB-004"
+  version: "1.0.0"
+  name: "Create Doctrine Migration"
+  category: "DB"
+  description: >
+    Generates a forward+rollback Doctrine migration from the diff between
+    the current entity mapping and the live database schema. Refuses to
+    include destructive statements (DROP TABLE/COLUMN, narrowing CHANGE)
+    and never executes the migration — execution is a separate,
+    human-approved step outside this capability's scope.
+
+  inputs:
+    - name: "target-entity"
+      type: "string"
+      required: false
+      description: "Optional filter to scope the diff to one entity."
+    - name: "migration-description"
+      type: "string"
+      required: false
+      default: ""
+      description: "Human-readable description embedded in the migration file."
+
+  outputs:
+    - name: "migration-file"
+      type: "file-path"
+      pattern: "migrations/Version*.php"
+    - name: "diff-report"
+      type: "markdown"
+      pattern: "reports/DB-004-diff-*.md"
+
+  dependencies:
+    - capability: "DB-001"
+      version: ">=1.0.0"
+      reason: >
+        Diffs migrations against the current entity inventory rather than
+        re-scanning entities independently.
+
+  adapters:
+    - stack: "php-symfony-doctrine"
+      adapter-id: "DB-004-PHP-SYM44-MYSQL8"
+
+  profile_constraints:
+    - "php:^7.1.3"
+    - "symfony/framework-bundle:~4.4"
+    - "doctrine/orm:^2.6"
+    - "doctrine/doctrine-bundle:^1.12"
+    - "doctrine/doctrine-migrations-bundle:^2.0"
+    - "doctrine/dbal:>=2.10"
+    - "mysql:>=8.0"
+
+  quality_gates:
+    - "test:unit-passing"
+    - "migration:rollback-safe"
+    - "migration:dry-run-required"
+    - "schema:no-destructive-diff"
+    - "schema:collation-charset-explicit"
+    - "schema:no-reserved-word-identifiers"
+
+  token_budget:
+    planning: 2000
+    implementation: 3000
+    validation: 2000
+
+  security_constraints:
+    - "no-secrets-in-migration"
+    - "input-validation-required"
+    - "no-destructive-schema-changes"
+    - "require-human-approval-before-migration-execution"

@@ -1,0 +1,4045 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {
+    "hyperedges": [
+      {
+        "id": "cli_command_groups",
+        "label": "ACSDD CLI Command Groups",
+        "nodes": [
+          "acsdd_cli_cli",
+          "acsdd_cli_capability",
+          "acsdd_cli_catalog",
+          "acsdd_cli_profile"
+        ],
+        "relation": "participate_in",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "src/acsdd/cli.py"
+      },
+      {
+        "id": "profile_discovery_pipeline",
+        "label": "PROFILE-001 Repository Discovery Pipeline",
+        "nodes": [
+          "profile_discovery_impl_stackdetector",
+          "profile_discovery_impl_symfonystructuredetector",
+          "profile_discovery_impl_conventiondetector",
+          "profile_discovery_impl_architecturedetector",
+          "profile_discovery_impl_healthmetrics",
+          "profile_discovery_impl_profilegenerator"
+        ],
+        "relation": "participate_in",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "src/acsdd/profile/_discovery_impl.py"
+      },
+      {
+        "id": "db_capability_family",
+        "label": "DB-00x Doctrine Capability Family (shared DB-001 prerequisite)",
+        "nodes": [
+          "manifests_db_001",
+          "manifests_db_002",
+          "manifests_db_003",
+          "manifests_db_004"
+        ],
+        "relation": "form",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "capabilities/_manifests/DB-001.yaml"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "label": "cli.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L1",
+      "id": "src_acsdd_cli_py",
+      "community": 1,
+      "norm_label": "cli.py"
+    },
+    {
+      "label": "_default_capabilities_dir()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L21",
+      "id": "acsdd_cli_default_capabilities_dir",
+      "community": 1,
+      "norm_label": "_default_capabilities_dir()"
+    },
+    {
+      "label": "cli()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L34",
+      "id": "acsdd_cli_cli",
+      "community": 1,
+      "norm_label": "cli()"
+    },
+    {
+      "label": "capability()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L43",
+      "id": "acsdd_cli_capability",
+      "community": 1,
+      "norm_label": "capability()"
+    },
+    {
+      "label": "_load_all()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L47",
+      "id": "acsdd_cli_load_all",
+      "community": 1,
+      "norm_label": "_load_all()"
+    },
+    {
+      "label": "capability_validate()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L64",
+      "id": "acsdd_cli_capability_validate",
+      "community": 0,
+      "norm_label": "capability_validate()"
+    },
+    {
+      "label": "capability_list()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L117",
+      "id": "acsdd_cli_capability_list",
+      "community": 1,
+      "norm_label": "capability_list()"
+    },
+    {
+      "label": "capability_show()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L148",
+      "id": "acsdd_cli_capability_show",
+      "community": 1,
+      "norm_label": "capability_show()"
+    },
+    {
+      "label": "catalog()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L183",
+      "id": "acsdd_cli_catalog",
+      "community": 1,
+      "norm_label": "catalog()"
+    },
+    {
+      "label": "catalog_build()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L192",
+      "id": "acsdd_cli_catalog_build",
+      "community": 1,
+      "norm_label": "catalog_build()"
+    },
+    {
+      "label": "catalog_verify()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L210",
+      "id": "acsdd_cli_catalog_verify",
+      "community": 1,
+      "norm_label": "catalog_verify()"
+    },
+    {
+      "label": "_extract_catalog_date()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L251",
+      "id": "acsdd_cli_extract_catalog_date",
+      "community": 1,
+      "norm_label": "_extract_catalog_date()"
+    },
+    {
+      "label": "profile()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L269",
+      "id": "acsdd_cli_profile",
+      "community": 1,
+      "norm_label": "profile()"
+    },
+    {
+      "label": "profile_discover()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L280",
+      "id": "acsdd_cli_profile_discover",
+      "community": 2,
+      "norm_label": "profile_discover()"
+    },
+    {
+      "label": "profile_validate()",
+      "file_type": "code",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L294",
+      "id": "acsdd_cli_profile_validate",
+      "community": 2,
+      "norm_label": "profile_validate()"
+    },
+    {
+      "label": "acsdd \u2014 command-line tool for the ACSDD framework.  Subcommand groups:   acsdd c",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L1",
+      "id": "acsdd_cli_rationale_1",
+      "community": 1,
+      "norm_label": "acsdd \u2014 command-line tool for the acsdd framework.  subcommand groups:   acsdd c"
+    },
+    {
+      "label": "Walk up from cwd looking for a capabilities/_manifests dir, falling     back to",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L22",
+      "id": "acsdd_cli_rationale_22",
+      "community": 1,
+      "norm_label": "walk up from cwd looking for a capabilities/_manifests dir, falling     back to"
+    },
+    {
+      "label": "ACSDD \u2014 AI-Collaborative Software Development & Delivery CLI.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L35",
+      "id": "acsdd_cli_rationale_35",
+      "community": 1,
+      "norm_label": "acsdd \u2014 ai-collaborative software development & delivery cli."
+    },
+    {
+      "label": "Work with individual capability manifests.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L44",
+      "id": "acsdd_cli_rationale_44",
+      "community": 1,
+      "norm_label": "work with individual capability manifests."
+    },
+    {
+      "label": "Returns ({capability_id: raw_dict}, [load_errors]).",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L48",
+      "id": "acsdd_cli_rationale_48",
+      "community": 1,
+      "norm_label": "returns ({capability_id: raw_dict}, [load_errors])."
+    },
+    {
+      "label": "Validate one manifest (PATH) or every manifest in --manifests-dir     against th",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L65",
+      "id": "acsdd_cli_rationale_65",
+      "community": 0,
+      "norm_label": "validate one manifest (path) or every manifest in --manifests-dir     against th"
+    },
+    {
+      "label": "List every capability manifest found, sorted by ID.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L118",
+      "id": "acsdd_cli_rationale_118",
+      "community": 1,
+      "norm_label": "list every capability manifest found, sorted by id."
+    },
+    {
+      "label": "Print the full manifest for one capability ID, plus its resolved     dependency",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L149",
+      "id": "acsdd_cli_rationale_149",
+      "community": 1,
+      "norm_label": "print the full manifest for one capability id, plus its resolved     dependency"
+    },
+    {
+      "label": "Build and verify the capability catalog (CATALOG.md).",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L184",
+      "id": "acsdd_cli_rationale_184",
+      "community": 1,
+      "norm_label": "build and verify the capability catalog (catalog.md)."
+    },
+    {
+      "label": "Regenerate CATALOG.md from the manifests in _manifests/. This file     is genera",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L193",
+      "id": "acsdd_cli_rationale_193",
+      "community": 1,
+      "norm_label": "regenerate catalog.md from the manifests in _manifests/. this file     is genera"
+    },
+    {
+      "label": "Fail if CATALOG.md is stale relative to the manifests, or if any     manifest fa",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L211",
+      "id": "acsdd_cli_rationale_211",
+      "community": 1,
+      "norm_label": "fail if catalog.md is stale relative to the manifests, or if any     manifest fa"
+    },
+    {
+      "label": "Pull the '**Last generated:** YYYY-MM-DD' line out of an existing     CATALOG.md",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L252",
+      "id": "acsdd_cli_rationale_252",
+      "community": 1,
+      "norm_label": "pull the '**last generated:** yyyy-mm-dd' line out of an existing     catalog.md"
+    },
+    {
+      "label": "Discover and validate ACSDD Engineering Profiles.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L270",
+      "id": "acsdd_cli_rationale_270",
+      "community": 1,
+      "norm_label": "discover and validate acsdd engineering profiles."
+    },
+    {
+      "label": "Run PROFILE-001 discovery against REPO_PATH (wraps the existing     profile-disc",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L281",
+      "id": "acsdd_cli_rationale_281",
+      "community": 2,
+      "norm_label": "run profile-001 discovery against repo_path (wraps the existing     profile-disc"
+    },
+    {
+      "label": "Validate a Profile YAML file against the Appendix B schema.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L295",
+      "id": "acsdd_cli_rationale_295",
+      "community": 2,
+      "norm_label": "validate a profile yaml file against the appendix b schema."
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/__init__.py",
+      "source_location": "L1",
+      "id": "src_acsdd_init_py",
+      "community": 11,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "ACSDD CLI \u2014 command-line tooling for the AI-Collaborative Software Development &",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/__init__.py",
+      "source_location": "L1",
+      "id": "acsdd_init_rationale_1",
+      "community": 11,
+      "norm_label": "acsdd cli \u2014 command-line tooling for the ai-collaborative software development &"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/__init__.py",
+      "source_location": "L1",
+      "id": "src_acsdd_capability_init_py",
+      "community": 12,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "loader.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L1",
+      "id": "src_acsdd_capability_loader_py",
+      "community": 0,
+      "norm_label": "loader.py"
+    },
+    {
+      "label": "ManifestLoadError",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L9",
+      "id": "capability_loader_manifestloaderror",
+      "community": 0,
+      "norm_label": "manifestloaderror"
+    },
+    {
+      "label": "Exception",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "id": "exception",
+      "community": 0,
+      "norm_label": "exception"
+    },
+    {
+      "label": "load_manifest()",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L13",
+      "id": "capability_loader_load_manifest",
+      "community": 0,
+      "norm_label": "load_manifest()"
+    },
+    {
+      "label": "iter_manifests()",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L28",
+      "id": "capability_loader_iter_manifests",
+      "community": 0,
+      "norm_label": "iter_manifests()"
+    },
+    {
+      "label": "Loads capability manifest YAML files from a directory or single path.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L1",
+      "id": "capability_loader_rationale_1",
+      "community": 0,
+      "norm_label": "loads capability manifest yaml files from a directory or single path."
+    },
+    {
+      "label": "Raised when a manifest file can't be parsed at all (bad YAML, etc.).",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L10",
+      "id": "capability_loader_rationale_10",
+      "community": 0,
+      "norm_label": "raised when a manifest file can't be parsed at all (bad yaml, etc.)."
+    },
+    {
+      "label": "Load a single manifest file and return its raw dict (not yet     schema-validate",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L14",
+      "id": "capability_loader_rationale_14",
+      "community": 0,
+      "norm_label": "load a single manifest file and return its raw dict (not yet     schema-validate"
+    },
+    {
+      "label": "Yield (path, raw_dict) for every *.yaml / *.yml file in a directory,     sorted",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L29",
+      "id": "capability_loader_rationale_29",
+      "community": 0,
+      "norm_label": "yield (path, raw_dict) for every *.yaml / *.yml file in a directory,     sorted"
+    },
+    {
+      "label": "validator.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L1",
+      "id": "src_acsdd_capability_validator_py",
+      "community": 0,
+      "norm_label": "validator.py"
+    },
+    {
+      "label": "ValidationResult",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L17",
+      "id": "capability_validator_validationresult",
+      "community": 0,
+      "norm_label": "validationresult"
+    },
+    {
+      "label": "ok()",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L23",
+      "id": "capability_validator_ok",
+      "community": 0,
+      "norm_label": "ok()"
+    },
+    {
+      "label": "_load_schema()",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L27",
+      "id": "capability_validator_load_schema",
+      "community": 0,
+      "norm_label": "_load_schema()"
+    },
+    {
+      "label": "get_schema()",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L37",
+      "id": "capability_validator_get_schema",
+      "community": 0,
+      "norm_label": "get_schema()"
+    },
+    {
+      "label": "validate_manifest()",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L44",
+      "id": "capability_validator_validate_manifest",
+      "community": 0,
+      "norm_label": "validate_manifest()"
+    },
+    {
+      "label": "validate_catalog()",
+      "file_type": "code",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L60",
+      "id": "capability_validator_validate_catalog",
+      "community": 0,
+      "norm_label": "validate_catalog()"
+    },
+    {
+      "label": "Validates capability manifests against the Appendix A JSON Schema, plus checks t",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L1",
+      "id": "capability_validator_rationale_1",
+      "community": 0,
+      "norm_label": "validates capability manifests against the appendix a json schema, plus checks t"
+    },
+    {
+      "label": "Schema-only validation of a single already-loaded manifest dict.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L45",
+      "id": "capability_validator_rationale_45",
+      "community": 0,
+      "norm_label": "schema-only validation of a single already-loaded manifest dict."
+    },
+    {
+      "label": "Cross-manifest checks across an already-loaded {capability_id: data}     map: sc",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L61",
+      "id": "capability_validator_rationale_61",
+      "community": 0,
+      "norm_label": "cross-manifest checks across an already-loaded {capability_id: data}     map: sc"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/__init__.py",
+      "source_location": "L1",
+      "id": "src_acsdd_profile_init_py",
+      "community": 13,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "_discovery_impl.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L1",
+      "id": "src_acsdd_profile_discovery_impl_py",
+      "community": 4,
+      "norm_label": "_discovery_impl.py"
+    },
+    {
+      "label": "prune_excluded_dirs()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L54",
+      "id": "profile_discovery_impl_prune_excluded_dirs",
+      "community": 7,
+      "norm_label": "prune_excluded_dirs()"
+    },
+    {
+      "label": "StackDetector",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L59",
+      "id": "profile_discovery_impl_stackdetector",
+      "community": 3,
+      "norm_label": "stackdetector"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L142",
+      "id": "profile_discovery_impl_stackdetector_init",
+      "community": 3,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".score_all()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L146",
+      "id": "profile_discovery_impl_stackdetector_score_all",
+      "community": 3,
+      "norm_label": ".score_all()"
+    },
+    {
+      "label": ".detect()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L163",
+      "id": "profile_discovery_impl_stackdetector_detect",
+      "community": 3,
+      "norm_label": ".detect()"
+    },
+    {
+      "label": ".detect_by_role()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L172",
+      "id": "profile_discovery_impl_stackdetector_detect_by_role",
+      "community": 3,
+      "norm_label": ".detect_by_role()"
+    },
+    {
+      "label": "._read_manifest()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L191",
+      "id": "profile_discovery_impl_stackdetector_read_manifest",
+      "community": 3,
+      "norm_label": "._read_manifest()"
+    },
+    {
+      "label": "._extract_deps()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L232",
+      "id": "profile_discovery_impl_stackdetector_extract_deps",
+      "community": 3,
+      "norm_label": "._extract_deps()"
+    },
+    {
+      "label": "SymfonyStructureDetector",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L255",
+      "id": "profile_discovery_impl_symfonystructuredetector",
+      "community": 4,
+      "norm_label": "symfonystructuredetector"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L267",
+      "id": "profile_discovery_impl_symfonystructuredetector_init",
+      "community": 4,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".detect()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L270",
+      "id": "profile_discovery_impl_symfonystructuredetector_detect",
+      "community": 4,
+      "norm_label": ".detect()"
+    },
+    {
+      "label": "_normalize_version()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L335",
+      "id": "profile_discovery_impl_normalize_version",
+      "community": 4,
+      "norm_label": "_normalize_version()"
+    },
+    {
+      "label": "ConventionDetector",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L343",
+      "id": "profile_discovery_impl_conventiondetector",
+      "community": 7,
+      "norm_label": "conventiondetector"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L388",
+      "id": "profile_discovery_impl_conventiondetector_init",
+      "community": 7,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".detect()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L392",
+      "id": "profile_discovery_impl_conventiondetector_detect",
+      "community": 7,
+      "norm_label": ".detect()"
+    },
+    {
+      "label": "._add_finding()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L433",
+      "id": "profile_discovery_impl_conventiondetector_add_finding",
+      "community": 7,
+      "norm_label": "._add_finding()"
+    },
+    {
+      "label": "ArchitectureDetector",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L450",
+      "id": "profile_discovery_impl_architecturedetector",
+      "community": 9,
+      "norm_label": "architecturedetector"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L460",
+      "id": "profile_discovery_impl_architecturedetector_init",
+      "community": 9,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".detect()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L463",
+      "id": "profile_discovery_impl_architecturedetector_detect",
+      "community": 9,
+      "norm_label": ".detect()"
+    },
+    {
+      "label": "._find_source_dirs()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L489",
+      "id": "profile_discovery_impl_architecturedetector_find_source_dirs",
+      "community": 9,
+      "norm_label": "._find_source_dirs()"
+    },
+    {
+      "label": "HealthMetrics",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L499",
+      "id": "profile_discovery_impl_healthmetrics",
+      "community": 10,
+      "norm_label": "healthmetrics"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L502",
+      "id": "profile_discovery_impl_healthmetrics_init",
+      "community": 10,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".analyze()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L505",
+      "id": "profile_discovery_impl_healthmetrics_analyze",
+      "community": 10,
+      "norm_label": ".analyze()"
+    },
+    {
+      "label": "._parse_coverage()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L575",
+      "id": "profile_discovery_impl_healthmetrics_parse_coverage",
+      "community": 10,
+      "norm_label": "._parse_coverage()"
+    },
+    {
+      "label": "._assess_tech_debt()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L590",
+      "id": "profile_discovery_impl_healthmetrics_assess_tech_debt",
+      "community": 10,
+      "norm_label": "._assess_tech_debt()"
+    },
+    {
+      "label": "ProfileGenerator",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L612",
+      "id": "profile_discovery_impl_profilegenerator",
+      "community": 6,
+      "norm_label": "profilegenerator"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L634",
+      "id": "profile_discovery_impl_profilegenerator_init",
+      "community": 6,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".generate()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L658",
+      "id": "profile_discovery_impl_profilegenerator_generate",
+      "community": 6,
+      "norm_label": ".generate()"
+    },
+    {
+      "label": "._symfony_structure_notes()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L816",
+      "id": "profile_discovery_impl_profilegenerator_symfony_structure_notes",
+      "community": 6,
+      "norm_label": "._symfony_structure_notes()"
+    },
+    {
+      "label": "._first_tool()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L835",
+      "id": "profile_discovery_impl_profilegenerator_first_tool",
+      "community": 6,
+      "norm_label": "._first_tool()"
+    },
+    {
+      "label": "._build_gate_list()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L839",
+      "id": "profile_discovery_impl_profilegenerator_build_gate_list",
+      "community": 6,
+      "norm_label": "._build_gate_list()"
+    },
+    {
+      "label": "._calculate_confidence()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L859",
+      "id": "profile_discovery_impl_profilegenerator_calculate_confidence",
+      "community": 6,
+      "norm_label": "._calculate_confidence()"
+    },
+    {
+      "label": "generate_discovery_report()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L881",
+      "id": "profile_discovery_impl_generate_discovery_report",
+      "community": 4,
+      "norm_label": "generate_discovery_report()"
+    },
+    {
+      "label": "generate_recommendations()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L969",
+      "id": "profile_discovery_impl_generate_recommendations",
+      "community": 4,
+      "norm_label": "generate_recommendations()"
+    },
+    {
+      "label": "main()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L1062",
+      "id": "profile_discovery_impl_main",
+      "community": 4,
+      "norm_label": "main()"
+    },
+    {
+      "label": "In-place filter for os.walk's dirs list, skipping vendored/build dirs.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L55",
+      "id": "profile_discovery_impl_rationale_55",
+      "community": 7,
+      "norm_label": "in-place filter for os.walk's dirs list, skipping vendored/build dirs."
+    },
+    {
+      "label": "Detects technology stack(s) from repository files.      A repo is not assumed to",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L60",
+      "id": "profile_discovery_impl_rationale_60",
+      "community": 3,
+      "norm_label": "detects technology stack(s) from repository files.      a repo is not assumed to"
+    },
+    {
+      "label": "Returns raw match score per stack_id for this detector's path.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L147",
+      "id": "profile_discovery_impl_rationale_147",
+      "community": 3,
+      "norm_label": "returns raw match score per stack_id for this detector's path."
+    },
+    {
+      "label": "Backward-compatible single-winner detection.         Returns (stack_id, stack_in",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L164",
+      "id": "profile_discovery_impl_rationale_164",
+      "community": 3,
+      "norm_label": "backward-compatible single-winner detection.         returns (stack_id, stack_in"
+    },
+    {
+      "label": "Returns the best-scoring stack per role, e.g.         {\"backend\": (\"php-symfony\"",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L173",
+      "id": "profile_discovery_impl_rationale_173",
+      "community": 3,
+      "norm_label": "returns the best-scoring stack per role, e.g.         {\"backend\": (\"php-symfony\""
+    },
+    {
+      "label": "Symfony-specific enrichment, invoked only when the backend stack is     php-symf",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L256",
+      "id": "profile_discovery_impl_rationale_256",
+      "community": 4,
+      "norm_label": "symfony-specific enrichment, invoked only when the backend stack is     php-symf"
+    },
+    {
+      "label": "Detects code conventions and quality gates.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L344",
+      "id": "profile_discovery_impl_rationale_344",
+      "community": 7,
+      "norm_label": "detects code conventions and quality gates."
+    },
+    {
+      "label": "Returns dict of detected tools by category.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L393",
+      "id": "profile_discovery_impl_rationale_393",
+      "community": 7,
+      "norm_label": "returns dict of detected tools by category."
+    },
+    {
+      "label": "Detects architecture patterns from directory structure.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L451",
+      "id": "profile_discovery_impl_rationale_451",
+      "community": 9,
+      "norm_label": "detects architecture patterns from directory structure."
+    },
+    {
+      "label": "Returns (pattern, confidence).",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L464",
+      "id": "profile_discovery_impl_rationale_464",
+      "community": 9,
+      "norm_label": "returns (pattern, confidence)."
+    },
+    {
+      "label": "Extracts repository health metrics.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L500",
+      "id": "profile_discovery_impl_rationale_500",
+      "community": 10,
+      "norm_label": "extracts repository health metrics."
+    },
+    {
+      "label": "Generates the ACSDD Engineering Profile draft.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L613",
+      "id": "profile_discovery_impl_rationale_613",
+      "community": 6,
+      "norm_label": "generates the acsdd engineering profile draft."
+    },
+    {
+      "label": "Only present when the backend stack is php-symfony. Surfaces         directory-s",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L817",
+      "id": "profile_discovery_impl_rationale_817",
+      "community": 6,
+      "norm_label": "only present when the backend stack is php-symfony. surfaces         directory-s"
+    },
+    {
+      "label": "Generate the discovery report markdown.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L887",
+      "id": "profile_discovery_impl_rationale_887",
+      "community": 4,
+      "norm_label": "generate the discovery report markdown."
+    },
+    {
+      "label": "Generate recommendations markdown.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L972",
+      "id": "profile_discovery_impl_rationale_972",
+      "community": 4,
+      "norm_label": "generate recommendations markdown."
+    },
+    {
+      "label": "validator.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L1",
+      "id": "src_acsdd_profile_validator_py",
+      "community": 2,
+      "norm_label": "validator.py"
+    },
+    {
+      "label": "ProfileValidationResult",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L15",
+      "id": "profile_validator_profilevalidationresult",
+      "community": 2,
+      "norm_label": "profilevalidationresult"
+    },
+    {
+      "label": "ok()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L20",
+      "id": "profile_validator_ok",
+      "community": 2,
+      "norm_label": "ok()"
+    },
+    {
+      "label": "get_schema()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L27",
+      "id": "profile_validator_get_schema",
+      "community": 2,
+      "norm_label": "get_schema()"
+    },
+    {
+      "label": "validate_profile_file()",
+      "file_type": "code",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L37",
+      "id": "profile_validator_validate_profile_file",
+      "community": 2,
+      "norm_label": "validate_profile_file()"
+    },
+    {
+      "label": "Validates an ACSDD Engineering Profile YAML file against the Appendix B JSON Sch",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L1",
+      "id": "profile_validator_rationale_1",
+      "community": 2,
+      "norm_label": "validates an acsdd engineering profile yaml file against the appendix b json sch"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/catalog/__init__.py",
+      "source_location": "L1",
+      "id": "src_acsdd_catalog_init_py",
+      "community": 14,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "builder.py",
+      "file_type": "code",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L1",
+      "id": "src_acsdd_catalog_builder_py",
+      "community": 8,
+      "norm_label": "builder.py"
+    },
+    {
+      "label": "_doc_link()",
+      "file_type": "code",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L27",
+      "id": "catalog_builder_doc_link",
+      "community": 8,
+      "norm_label": "_doc_link()"
+    },
+    {
+      "label": "build_catalog_markdown()",
+      "file_type": "code",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L52",
+      "id": "catalog_builder_build_catalog_markdown",
+      "community": 8,
+      "norm_label": "build_catalog_markdown()"
+    },
+    {
+      "label": "Builds capabilities/CATALOG.md directly from the manifest files under capabiliti",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L1",
+      "id": "catalog_builder_rationale_1",
+      "community": 8,
+      "norm_label": "builds capabilities/catalog.md directly from the manifest files under capabiliti"
+    },
+    {
+      "label": "Best-effort: find a procedure doc under capabilities/<category-dir>/     whose c",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L28",
+      "id": "catalog_builder_rationale_28",
+      "community": 8,
+      "norm_label": "best-effort: find a procedure doc under capabilities/<category-dir>/     whose c"
+    },
+    {
+      "label": "manifests: {capability_id: raw_manifest_dict}, already schema-valid.",
+      "file_type": "rationale",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L54",
+      "id": "catalog_builder_rationale_54",
+      "community": 8,
+      "norm_label": "manifests: {capability_id: raw_manifest_dict}, already schema-valid."
+    },
+    {
+      "label": "test_capability.py",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L1",
+      "id": "tests_test_capability_py",
+      "community": 0,
+      "norm_label": "test_capability.py"
+    },
+    {
+      "label": "real_manifests_dir()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L32",
+      "id": "tests_test_capability_real_manifests_dir",
+      "community": 0,
+      "norm_label": "real_manifests_dir()"
+    },
+    {
+      "label": "test_load_manifest()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L36",
+      "id": "tests_test_capability_test_load_manifest",
+      "community": 0,
+      "norm_label": "test_load_manifest()"
+    },
+    {
+      "label": "test_load_manifest_bad_yaml()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L43",
+      "id": "tests_test_capability_test_load_manifest_bad_yaml",
+      "community": 0,
+      "norm_label": "test_load_manifest_bad_yaml()"
+    },
+    {
+      "label": "test_validate_manifest_passes()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L50",
+      "id": "tests_test_capability_test_validate_manifest_passes",
+      "community": 0,
+      "norm_label": "test_validate_manifest_passes()"
+    },
+    {
+      "label": "test_validate_manifest_bad_id_pattern()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L58",
+      "id": "tests_test_capability_test_validate_manifest_bad_id_pattern",
+      "community": 0,
+      "norm_label": "test_validate_manifest_bad_id_pattern()"
+    },
+    {
+      "label": "test_validate_manifest_missing_required_field()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L67",
+      "id": "tests_test_capability_test_validate_manifest_missing_required_field",
+      "community": 0,
+      "norm_label": "test_validate_manifest_missing_required_field()"
+    },
+    {
+      "label": "test_validate_catalog_missing_dependency()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L77",
+      "id": "tests_test_capability_test_validate_catalog_missing_dependency",
+      "community": 0,
+      "norm_label": "test_validate_catalog_missing_dependency()"
+    },
+    {
+      "label": "test_validate_catalog_circular_dependency()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L87",
+      "id": "tests_test_capability_test_validate_catalog_circular_dependency",
+      "community": 0,
+      "norm_label": "test_validate_catalog_circular_dependency()"
+    },
+    {
+      "label": "test_validate_catalog_self_dependency()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L97",
+      "id": "tests_test_capability_test_validate_catalog_self_dependency",
+      "community": 0,
+      "norm_label": "test_validate_catalog_self_dependency()"
+    },
+    {
+      "label": "test_validate_catalog_clean_graph_has_no_problems()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L105",
+      "id": "tests_test_capability_test_validate_catalog_clean_graph_has_no_problems",
+      "community": 0,
+      "norm_label": "test_validate_catalog_clean_graph_has_no_problems()"
+    },
+    {
+      "label": "test_real_manifests_all_valid()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L115",
+      "id": "tests_test_capability_test_real_manifests_all_valid",
+      "community": 0,
+      "norm_label": "test_real_manifests_all_valid()"
+    },
+    {
+      "label": "test_real_manifests_dependency_graph_is_clean()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L121",
+      "id": "tests_test_capability_test_real_manifests_dependency_graph_is_clean",
+      "community": 0,
+      "norm_label": "test_real_manifests_dependency_graph_is_clean()"
+    },
+    {
+      "label": "test_db_002_003_004_all_depend_on_db_001()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L129",
+      "id": "tests_test_capability_test_db_002_003_004_all_depend_on_db_001",
+      "community": 5,
+      "norm_label": "test_db_002_003_004_all_depend_on_db_001()"
+    },
+    {
+      "label": "test_build_catalog_markdown_lists_all_capabilities()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L140",
+      "id": "tests_test_capability_test_build_catalog_markdown_lists_all_capabilities",
+      "community": 8,
+      "norm_label": "test_build_catalog_markdown_lists_all_capabilities()"
+    },
+    {
+      "label": "test_build_catalog_markdown_empty_categories_marked_none_yet()",
+      "file_type": "code",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L154",
+      "id": "tests_test_capability_test_build_catalog_markdown_empty_categories_marked_none_yet",
+      "community": 8,
+      "norm_label": "test_build_catalog_markdown_empty_categories_marked_none_yet()"
+    },
+    {
+      "label": "Tests for the ACSDD CLI's capability validator and catalog builder.",
+      "file_type": "rationale",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L1",
+      "id": "tests_test_capability_rationale_1",
+      "community": 0,
+      "norm_label": "tests for the acsdd cli's capability validator and catalog builder."
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "tests/__init__.py",
+      "source_location": "L1",
+      "id": "tests_init_py",
+      "community": 15,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "test_profile.py",
+      "file_type": "code",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L1",
+      "id": "tests_test_profile_py",
+      "community": 2,
+      "norm_label": "test_profile.py"
+    },
+    {
+      "label": "test_valid_profile_passes()",
+      "file_type": "code",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L23",
+      "id": "tests_test_profile_test_valid_profile_passes",
+      "community": 2,
+      "norm_label": "test_valid_profile_passes()"
+    },
+    {
+      "label": "test_profile_missing_required_section_fails()",
+      "file_type": "code",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L30",
+      "id": "tests_test_profile_test_profile_missing_required_section_fails",
+      "community": 2,
+      "norm_label": "test_profile_missing_required_section_fails()"
+    },
+    {
+      "label": "test_profile_bad_version_pattern_fails()",
+      "file_type": "code",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L37",
+      "id": "tests_test_profile_test_profile_bad_version_pattern_fails",
+      "community": 2,
+      "norm_label": "test_profile_bad_version_pattern_fails()"
+    },
+    {
+      "label": "test_profile_bad_yaml_fails()",
+      "file_type": "code",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L45",
+      "id": "tests_test_profile_test_profile_bad_yaml_fails",
+      "community": 2,
+      "norm_label": "test_profile_bad_yaml_fails()"
+    },
+    {
+      "label": "Tests for the ACSDD CLI's profile validator.",
+      "file_type": "rationale",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L1",
+      "id": "tests_test_profile_rationale_1",
+      "community": 2,
+      "norm_label": "tests for the acsdd cli's profile validator."
+    },
+    {
+      "label": "ACSDD CLI README",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "readme_acsdd_cli",
+      "community": 1,
+      "norm_label": "acsdd cli readme"
+    },
+    {
+      "label": "Capability Catalog \u2014 Inventory (generated)",
+      "file_type": "document",
+      "source_file": "capabilities/CATALOG.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "capabilities_catalog",
+      "community": 5,
+      "norm_label": "capability catalog \u2014 inventory (generated)"
+    },
+    {
+      "label": "DB-001: Identify Doctrine Entities",
+      "file_type": "document",
+      "source_file": "capabilities/_manifests/DB-001.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Read-only prerequisite inventory step; DB-002/003/004 all declare a dependency on it rather than re-implementing entity discovery. Doc flags that 'MySQL 8.15' isn't a real MySQL release string (point releases only go up to 8.0.46 / next LTS 8.4), so the profile's stated MySQL version needs human confirmation.",
+      "id": "manifests_db_001",
+      "community": 5,
+      "norm_label": "db-001: identify doctrine entities"
+    },
+    {
+      "label": "DB-002: Create Doctrine Entity",
+      "file_type": "document",
+      "source_file": "capabilities/_manifests/DB-002.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Deliberately avoids PHP 8.0+ features (constructor property promotion, readonly properties) because this adapter targets Symfony 4.4's PHP ^7.1.3 constraint, even though such features would otherwise be idiomatic for new entity code.",
+      "id": "manifests_db_002",
+      "community": 5,
+      "norm_label": "db-002: create doctrine entity"
+    },
+    {
+      "label": "DB-003: Update Doctrine Entity",
+      "file_type": "document",
+      "source_file": "capabilities/_manifests/DB-003.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Deliberately non-destructive: rejects field narrowing, removal, or relation removal so that a targeted edit capability can never silently produce a destructive schema change; that concern is pushed to DB-004's diff-review step instead.",
+      "id": "manifests_db_003",
+      "community": 5,
+      "norm_label": "db-003: update doctrine entity"
+    },
+    {
+      "label": "DB-004: Create Doctrine Migration",
+      "file_type": "document",
+      "source_file": "capabilities/_manifests/DB-004.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Requires config/packages/doctrine.yaml to explicitly pin dbal.default_table_options.charset/collation to utf8mb4_0900_ai_ci because Doctrine DBAL's own default (utf8mb4_unicode_ci) diverges from what MySQL 8.0+ actually creates by default \u2014 without the pin, every diff run generates spurious COLLATE noise unrelated to real entity changes. Also never executes generated migrations; execution is a separate human-approved step per security_constraints.",
+      "id": "manifests_db_004",
+      "community": 5,
+      "norm_label": "db-004: create doctrine migration"
+    },
+    {
+      "label": "Procedure doc: Identify Doctrine Entities",
+      "file_type": "document",
+      "source_file": "capabilities/database/identify-doctrine-entities.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "database_identify_doctrine_entities_doc",
+      "community": 5,
+      "norm_label": "procedure doc: identify doctrine entities"
+    },
+    {
+      "label": "Procedure doc: Create Doctrine Entity",
+      "file_type": "document",
+      "source_file": "capabilities/database/create-doctrine-entity.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "database_create_doctrine_entity_doc",
+      "community": 5,
+      "norm_label": "procedure doc: create doctrine entity"
+    },
+    {
+      "label": "Procedure doc: Update Doctrine Entity",
+      "file_type": "document",
+      "source_file": "capabilities/database/update-doctrine-entity.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "database_update_doctrine_entity_doc",
+      "community": 5,
+      "norm_label": "procedure doc: update doctrine entity"
+    },
+    {
+      "label": "Procedure doc: Create Doctrine Migration",
+      "file_type": "document",
+      "source_file": "capabilities/database/create-doctrine-migration.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "database_create_doctrine_migration_doc",
+      "community": 5,
+      "norm_label": "procedure doc: create doctrine migration"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_default_capabilities_dir",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L34",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_cli",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_capability",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_load_all",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_capability_validate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L117",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_capability_list",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L148",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_capability_show",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L183",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_catalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L192",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_catalog_build",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L210",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_catalog_verify",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L251",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_extract_catalog_date",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L269",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_profile",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L280",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_profile_discover",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L294",
+      "weight": 1.0,
+      "source": "src_acsdd_cli_py",
+      "target": "acsdd_cli_profile_validate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_1",
+      "target": "src_acsdd_cli_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_capability_validate",
+      "target": "acsdd_cli_default_capabilities_dir"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_capability_list",
+      "target": "acsdd_cli_default_capabilities_dir"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_capability_show",
+      "target": "acsdd_cli_default_capabilities_dir"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_catalog_build",
+      "target": "acsdd_cli_default_capabilities_dir"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_catalog_verify",
+      "target": "acsdd_cli_default_capabilities_dir"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_22",
+      "target": "acsdd_cli_default_capabilities_dir",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L35",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_35",
+      "target": "acsdd_cli_cli",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L44",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_44",
+      "target": "acsdd_cli_capability",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "readme_acsdd_cli",
+      "target": "acsdd_cli_capability"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_capability_validate",
+      "target": "acsdd_cli_load_all"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_capability_list",
+      "target": "acsdd_cli_load_all"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_capability_show",
+      "target": "acsdd_cli_load_all"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_catalog_build",
+      "target": "acsdd_cli_load_all"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_catalog_verify",
+      "target": "acsdd_cli_load_all"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L48",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_48",
+      "target": "acsdd_cli_load_all",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_load_all",
+      "target": "capability_loader_iter_manifests"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L65",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_65",
+      "target": "acsdd_cli_capability_validate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_capability_validate",
+      "target": "capability_loader_load_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_capability_validate",
+      "target": "capability_validator_validate_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_capability_validate",
+      "target": "capability_validator_validate_catalog"
+    },
+    {
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_capability_validate",
+      "target": "acsdd_cli_profile_validate"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L118",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_118",
+      "target": "acsdd_cli_capability_list",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L149",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_149",
+      "target": "acsdd_cli_capability_show",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L184",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_184",
+      "target": "acsdd_cli_catalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "readme_acsdd_cli",
+      "target": "acsdd_cli_catalog"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L193",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_193",
+      "target": "acsdd_cli_catalog_build",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_catalog_build",
+      "target": "catalog_builder_build_catalog_markdown"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "acsdd_cli_catalog_verify",
+      "target": "acsdd_cli_extract_catalog_date"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L211",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_211",
+      "target": "acsdd_cli_catalog_verify",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_catalog_verify",
+      "target": "capability_validator_validate_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_catalog_verify",
+      "target": "capability_validator_validate_catalog"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_catalog_verify",
+      "target": "catalog_builder_build_catalog_markdown"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L252",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_252",
+      "target": "acsdd_cli_extract_catalog_date",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L270",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_270",
+      "target": "acsdd_cli_profile",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "readme_acsdd_cli",
+      "target": "acsdd_cli_profile"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L281",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_281",
+      "target": "acsdd_cli_profile_discover",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_profile_discover",
+      "target": "profile_discovery_impl_main"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_profile_discover",
+      "target": "acsdd_cli_profile_validate"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/cli.py",
+      "source_location": "L295",
+      "weight": 1.0,
+      "source": "acsdd_cli_rationale_295",
+      "target": "acsdd_cli_profile_validate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "acsdd_cli_profile_validate",
+      "target": "profile_validator_validate_profile_file"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/__init__.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "acsdd_init_rationale_1",
+      "target": "src_acsdd_init_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "src_acsdd_capability_loader_py",
+      "target": "capability_loader_manifestloaderror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "src_acsdd_capability_loader_py",
+      "target": "capability_loader_load_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "src_acsdd_capability_loader_py",
+      "target": "capability_loader_iter_manifests",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "capability_loader_rationale_1",
+      "target": "src_acsdd_capability_loader_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "capability_loader_manifestloaderror",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "capability_loader_load_manifest",
+      "target": "capability_loader_manifestloaderror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "capability_loader_rationale_10",
+      "target": "capability_loader_manifestloaderror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L36",
+      "weight": 1.0,
+      "source": "capability_loader_iter_manifests",
+      "target": "capability_loader_load_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "capability_loader_rationale_14",
+      "target": "capability_loader_load_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_load_manifest",
+      "target": "capability_loader_load_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_load_manifest_bad_yaml",
+      "target": "capability_loader_load_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L53",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_manifest_passes",
+      "target": "capability_loader_load_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L61",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_manifest_bad_id_pattern",
+      "target": "capability_loader_load_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L72",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_manifest_missing_required_field",
+      "target": "capability_loader_load_manifest"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/loader.py",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "capability_loader_rationale_29",
+      "target": "capability_loader_iter_manifests",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_capability.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "tests_test_capability_test_real_manifests_all_valid",
+      "target": "capability_loader_iter_manifests"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L123",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_real_manifests_dependency_graph_is_clean",
+      "target": "capability_loader_iter_manifests"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_capability.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "tests_test_capability_test_db_002_003_004_all_depend_on_db_001",
+      "target": "capability_loader_iter_manifests"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L142",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_build_catalog_markdown_lists_all_capabilities",
+      "target": "capability_loader_iter_manifests"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "src_acsdd_capability_validator_py",
+      "target": "capability_validator_validationresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "src_acsdd_capability_validator_py",
+      "target": "capability_validator_ok",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "src_acsdd_capability_validator_py",
+      "target": "capability_validator_load_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "src_acsdd_capability_validator_py",
+      "target": "capability_validator_get_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L44",
+      "weight": 1.0,
+      "source": "src_acsdd_capability_validator_py",
+      "target": "capability_validator_validate_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L60",
+      "weight": 1.0,
+      "source": "src_acsdd_capability_validator_py",
+      "target": "capability_validator_validate_catalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "capability_validator_rationale_1",
+      "target": "src_acsdd_capability_validator_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L52",
+      "weight": 1.0,
+      "source": "capability_validator_validate_manifest",
+      "target": "capability_validator_validationresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "capability_validator_validationresult",
+      "target": "profile_validator_profilevalidationresult"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "capability_validator_get_schema",
+      "target": "capability_validator_load_schema"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "capability_validator_validate_manifest",
+      "target": "capability_validator_get_schema"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "capability_validator_rationale_45",
+      "target": "capability_validator_validate_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_manifest_passes",
+      "target": "capability_validator_validate_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_manifest_bad_id_pattern",
+      "target": "capability_validator_validate_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L73",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_manifest_missing_required_field",
+      "target": "capability_validator_validate_manifest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_capability.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "tests_test_capability_test_real_manifests_all_valid",
+      "target": "capability_validator_validate_manifest"
+    },
+    {
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "capability_validator_validate_manifest",
+      "target": "profile_validator_validate_profile_file"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/capability/validator.py",
+      "source_location": "L61",
+      "weight": 1.0,
+      "source": "capability_validator_rationale_61",
+      "target": "capability_validator_validate_catalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L82",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_catalog_missing_dependency",
+      "target": "capability_validator_validate_catalog"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L92",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_catalog_circular_dependency",
+      "target": "capability_validator_validate_catalog"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L100",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_catalog_self_dependency",
+      "target": "capability_validator_validate_catalog"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L109",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_validate_catalog_clean_graph_has_no_problems",
+      "target": "capability_validator_validate_catalog"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L125",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_real_manifests_dependency_graph_is_clean",
+      "target": "capability_validator_validate_catalog"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_prune_excluded_dirs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_stackdetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L255",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_symfonystructuredetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L335",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_normalize_version",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L343",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_conventiondetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L450",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_architecturedetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L499",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_healthmetrics",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L612",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_profilegenerator",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L881",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_generate_discovery_report",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L969",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_generate_recommendations",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L1062",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_discovery_impl_py",
+      "target": "profile_discovery_impl_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L410",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_conventiondetector_detect",
+      "target": "profile_discovery_impl_prune_excluded_dirs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L529",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_healthmetrics_analyze",
+      "target": "profile_discovery_impl_prune_excluded_dirs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L55",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_55",
+      "target": "profile_discovery_impl_prune_excluded_dirs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L142",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector",
+      "target": "profile_discovery_impl_stackdetector_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L146",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector",
+      "target": "profile_discovery_impl_stackdetector_score_all",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L163",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector",
+      "target": "profile_discovery_impl_stackdetector_detect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L172",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector",
+      "target": "profile_discovery_impl_stackdetector_detect_by_role",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L191",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector",
+      "target": "profile_discovery_impl_stackdetector_read_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L232",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector",
+      "target": "profile_discovery_impl_stackdetector_extract_deps",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_stackdetector"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L60",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_60",
+      "target": "profile_discovery_impl_stackdetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector",
+      "target": "profile_discovery_impl_profilegenerator"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L154",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector_score_all",
+      "target": "profile_discovery_impl_stackdetector_read_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L156",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector_score_all",
+      "target": "profile_discovery_impl_stackdetector_extract_deps",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L166",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector_detect",
+      "target": "profile_discovery_impl_stackdetector_score_all",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L176",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_stackdetector_detect_by_role",
+      "target": "profile_discovery_impl_stackdetector_score_all",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L147",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_147",
+      "target": "profile_discovery_impl_stackdetector_score_all",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L164",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_164",
+      "target": "profile_discovery_impl_stackdetector_detect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L1093",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_stackdetector_detect_by_role",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L173",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_173",
+      "target": "profile_discovery_impl_stackdetector_detect_by_role",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L267",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_symfonystructuredetector",
+      "target": "profile_discovery_impl_symfonystructuredetector_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L270",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_symfonystructuredetector",
+      "target": "profile_discovery_impl_symfonystructuredetector_detect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_symfonystructuredetector"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L256",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_256",
+      "target": "profile_discovery_impl_symfonystructuredetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator",
+      "target": "profile_discovery_impl_symfonystructuredetector"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "profile_discovery_impl_generate_recommendations",
+      "target": "profile_discovery_impl_symfonystructuredetector"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L289",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_symfonystructuredetector_detect",
+      "target": "profile_discovery_impl_normalize_version",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L388",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_conventiondetector",
+      "target": "profile_discovery_impl_conventiondetector_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L392",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_conventiondetector",
+      "target": "profile_discovery_impl_conventiondetector_detect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L433",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_conventiondetector",
+      "target": "profile_discovery_impl_conventiondetector_add_finding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_conventiondetector"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L344",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_344",
+      "target": "profile_discovery_impl_conventiondetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "profile_discovery_impl_conventiondetector",
+      "target": "profile_discovery_impl_profilegenerator"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L419",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_conventiondetector_detect",
+      "target": "profile_discovery_impl_conventiondetector_add_finding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L393",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_393",
+      "target": "profile_discovery_impl_conventiondetector_detect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L460",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_architecturedetector",
+      "target": "profile_discovery_impl_architecturedetector_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L463",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_architecturedetector",
+      "target": "profile_discovery_impl_architecturedetector_detect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L489",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_architecturedetector",
+      "target": "profile_discovery_impl_architecturedetector_find_source_dirs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_architecturedetector"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L451",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_451",
+      "target": "profile_discovery_impl_architecturedetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "profile_discovery_impl_architecturedetector",
+      "target": "profile_discovery_impl_profilegenerator"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L465",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_architecturedetector_detect",
+      "target": "profile_discovery_impl_architecturedetector_find_source_dirs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L1143",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_architecturedetector_detect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L464",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_464",
+      "target": "profile_discovery_impl_architecturedetector_detect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L502",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_healthmetrics",
+      "target": "profile_discovery_impl_healthmetrics_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L505",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_healthmetrics",
+      "target": "profile_discovery_impl_healthmetrics_analyze",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L575",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_healthmetrics",
+      "target": "profile_discovery_impl_healthmetrics_parse_coverage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L590",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_healthmetrics",
+      "target": "profile_discovery_impl_healthmetrics_assess_tech_debt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_healthmetrics"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L500",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_500",
+      "target": "profile_discovery_impl_healthmetrics",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "profile_discovery_impl_healthmetrics",
+      "target": "profile_discovery_impl_profilegenerator"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L567",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_healthmetrics_analyze",
+      "target": "profile_discovery_impl_healthmetrics_parse_coverage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L571",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_healthmetrics_analyze",
+      "target": "profile_discovery_impl_healthmetrics_assess_tech_debt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L1160",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_healthmetrics_analyze",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L634",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator",
+      "target": "profile_discovery_impl_profilegenerator_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L658",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator",
+      "target": "profile_discovery_impl_profilegenerator_generate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L816",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator",
+      "target": "profile_discovery_impl_profilegenerator_symfony_structure_notes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L835",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator",
+      "target": "profile_discovery_impl_profilegenerator_first_tool",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L839",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator",
+      "target": "profile_discovery_impl_profilegenerator_build_gate_list",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L859",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator",
+      "target": "profile_discovery_impl_profilegenerator_calculate_confidence",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_profilegenerator"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L613",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_613",
+      "target": "profile_discovery_impl_profilegenerator",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator",
+      "target": "manifests_db_001"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L662",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator_generate",
+      "target": "profile_discovery_impl_profilegenerator_first_tool",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L702",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator_generate",
+      "target": "profile_discovery_impl_profilegenerator_calculate_confidence",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L750",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator_generate",
+      "target": "profile_discovery_impl_profilegenerator_build_gate_list",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L810",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_profilegenerator_generate",
+      "target": "profile_discovery_impl_profilegenerator_symfony_structure_notes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L1181",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_profilegenerator_generate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L817",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_817",
+      "target": "profile_discovery_impl_profilegenerator_symfony_structure_notes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L1207",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_profilegenerator_calculate_confidence",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_generate_discovery_report"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L887",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_887",
+      "target": "profile_discovery_impl_generate_discovery_report",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "profile_discovery_impl_main",
+      "target": "profile_discovery_impl_generate_recommendations"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/_discovery_impl.py",
+      "source_location": "L972",
+      "weight": 1.0,
+      "source": "profile_discovery_impl_rationale_972",
+      "target": "profile_discovery_impl_generate_recommendations",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_validator_py",
+      "target": "profile_validator_profilevalidationresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_validator_py",
+      "target": "profile_validator_ok",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_validator_py",
+      "target": "profile_validator_get_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "src_acsdd_profile_validator_py",
+      "target": "profile_validator_validate_profile_file",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "profile_validator_rationale_1",
+      "target": "src_acsdd_profile_validator_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "profile_validator_validate_profile_file",
+      "target": "profile_validator_profilevalidationresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "AMBIGUOUS",
+      "confidence_score": 0.2,
+      "source_file": "capabilities/_manifests/DB-001.yaml",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "manifests_db_001",
+      "target": "profile_validator_profilevalidationresult"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/profile/validator.py",
+      "source_location": null,
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "profile_validator_validate_profile_file",
+      "target": "profile_validator_get_schema"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_profile.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "tests_test_profile_test_valid_profile_passes",
+      "target": "profile_validator_validate_profile_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_profile.py",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "tests_test_profile_test_profile_missing_required_section_fails",
+      "target": "profile_validator_validate_profile_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_profile.py",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "tests_test_profile_test_profile_bad_version_pattern_fails",
+      "target": "profile_validator_validate_profile_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_profile.py",
+      "source_location": "L48",
+      "weight": 1.0,
+      "source": "tests_test_profile_test_profile_bad_yaml_fails",
+      "target": "profile_validator_validate_profile_file"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "src_acsdd_catalog_builder_py",
+      "target": "catalog_builder_doc_link",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L52",
+      "weight": 1.0,
+      "source": "src_acsdd_catalog_builder_py",
+      "target": "catalog_builder_build_catalog_markdown",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "catalog_builder_rationale_1",
+      "target": "src_acsdd_catalog_builder_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L91",
+      "weight": 1.0,
+      "source": "catalog_builder_build_catalog_markdown",
+      "target": "catalog_builder_doc_link",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "catalog_builder_rationale_28",
+      "target": "catalog_builder_doc_link",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "catalog_builder_rationale_54",
+      "target": "catalog_builder_build_catalog_markdown",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_capability.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "tests_test_capability_test_build_catalog_markdown_lists_all_capabilities",
+      "target": "catalog_builder_build_catalog_markdown"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_capability.py",
+      "source_location": "L156",
+      "weight": 1.0,
+      "source": "tests_test_capability_test_build_catalog_markdown_empty_categories_marked_none_yet",
+      "target": "catalog_builder_build_catalog_markdown"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/catalog/builder.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "catalog_builder_build_catalog_markdown",
+      "target": "capabilities_catalog"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L32",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_real_manifests_dir",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L36",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_load_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_load_manifest_bad_yaml",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L50",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_validate_manifest_passes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L58",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_validate_manifest_bad_id_pattern",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L67",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_validate_manifest_missing_required_field",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L77",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_validate_catalog_missing_dependency",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L87",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_validate_catalog_circular_dependency",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L97",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_validate_catalog_self_dependency",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L105",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_validate_catalog_clean_graph_has_no_problems",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L115",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_real_manifests_all_valid",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L121",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_real_manifests_dependency_graph_is_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L129",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_db_002_003_004_all_depend_on_db_001",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L140",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_build_catalog_markdown_lists_all_capabilities",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L154",
+      "weight": 1.0,
+      "source": "tests_test_capability_py",
+      "target": "tests_test_capability_test_build_catalog_markdown_empty_categories_marked_none_yet",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_capability.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "tests_test_capability_rationale_1",
+      "target": "tests_test_capability_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_capability.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "tests_test_capability_test_db_002_003_004_all_depend_on_db_001",
+      "target": "manifests_db_001"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_capability.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "tests_test_capability_test_db_002_003_004_all_depend_on_db_001",
+      "target": "manifests_db_002"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_capability.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "tests_test_capability_test_db_002_003_004_all_depend_on_db_001",
+      "target": "manifests_db_003"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_capability.py",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "tests_test_capability_test_db_002_003_004_all_depend_on_db_001",
+      "target": "manifests_db_004"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "tests_test_profile_py",
+      "target": "tests_test_profile_test_valid_profile_passes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "tests_test_profile_py",
+      "target": "tests_test_profile_test_profile_missing_required_section_fails",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "tests_test_profile_py",
+      "target": "tests_test_profile_test_profile_bad_version_pattern_fails",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "tests_test_profile_py",
+      "target": "tests_test_profile_test_profile_bad_yaml_fails",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_profile.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "tests_test_profile_rationale_1",
+      "target": "tests_test_profile_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "readme_acsdd_cli",
+      "target": "capabilities_catalog"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/CATALOG.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "capabilities_catalog",
+      "target": "manifests_db_001"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/CATALOG.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "capabilities_catalog",
+      "target": "manifests_db_002"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/CATALOG.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "capabilities_catalog",
+      "target": "manifests_db_003"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/CATALOG.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "capabilities_catalog",
+      "target": "manifests_db_004"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/_manifests/DB-002.yaml",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "manifests_db_002",
+      "target": "manifests_db_001"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/_manifests/DB-003.yaml",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "manifests_db_003",
+      "target": "manifests_db_001"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/_manifests/DB-004.yaml",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "manifests_db_004",
+      "target": "manifests_db_001"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/database/identify-doctrine-entities.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_identify_doctrine_entities_doc",
+      "target": "manifests_db_001"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/database/create-doctrine-entity.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_create_doctrine_entity_doc",
+      "target": "manifests_db_002"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/database/update-doctrine-entity.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_update_doctrine_entity_doc",
+      "target": "manifests_db_003"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/database/create-doctrine-migration.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_create_doctrine_migration_doc",
+      "target": "manifests_db_004"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/database/create-doctrine-entity.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_create_doctrine_entity_doc",
+      "target": "database_identify_doctrine_entities_doc"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/database/update-doctrine-entity.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_update_doctrine_entity_doc",
+      "target": "database_identify_doctrine_entities_doc"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/database/create-doctrine-migration.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_create_doctrine_migration_doc",
+      "target": "database_identify_doctrine_entities_doc"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/database/create-doctrine-migration.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_create_doctrine_migration_doc",
+      "target": "database_create_doctrine_entity_doc"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/database/update-doctrine-entity.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_update_doctrine_entity_doc",
+      "target": "database_create_doctrine_migration_doc"
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "cli_command_groups",
+      "label": "ACSDD CLI Command Groups",
+      "nodes": [
+        "acsdd_cli_cli",
+        "acsdd_cli_capability",
+        "acsdd_cli_catalog",
+        "acsdd_cli_profile"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/cli.py"
+    },
+    {
+      "id": "profile_discovery_pipeline",
+      "label": "PROFILE-001 Repository Discovery Pipeline",
+      "nodes": [
+        "profile_discovery_impl_stackdetector",
+        "profile_discovery_impl_symfonystructuredetector",
+        "profile_discovery_impl_conventiondetector",
+        "profile_discovery_impl_architecturedetector",
+        "profile_discovery_impl_healthmetrics",
+        "profile_discovery_impl_profilegenerator"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/acsdd/profile/_discovery_impl.py"
+    },
+    {
+      "id": "db_capability_family",
+      "label": "DB-00x Doctrine Capability Family (shared DB-001 prerequisite)",
+      "nodes": [
+        "manifests_db_001",
+        "manifests_db_002",
+        "manifests_db_003",
+        "manifests_db_004"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "capabilities/_manifests/DB-001.yaml"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+capability:
+  id: "DB-002"
+  version: "1.0.0"
+  name: "Create Doctrine Entity"
+  category: "DB"
+  description: >
+    Generates a new Doctrine entity (and its repository class, where the
+    repository's convention is one-per-entity) from a specification. Checks
+    the proposed name and table/column identifiers against the current
+    entity inventory and MySQL 8 reserved words before generating anything.
+    Does not run a migration — that is DB-004's responsibility.
+
+  inputs:
+    - name: "entity-spec"
+      type: "spec-ref"
+      required: true
+      description: >
+        Specification describing the entity to create: name, table name
+        (optional — Doctrine defaults it), fields with types, and relations.
+
+  outputs:
+    - name: "entity-file"
+      type: "file-path"
+      pattern: "src/Entity/*.php"
+    - name: "repository-file"
+      type: "file-path"
+      pattern: "src/Repository/*Repository.php"
+    - name: "diff-report"
+      type: "markdown"
+      pattern: "reports/DB-002-diff-*.md"
+
+  dependencies:
+    - capability: "DB-001"
+      version: ">=1.0.0"
+      reason: >
+        Requires the current entity inventory to check for name collisions
+        and to match existing entity-authoring conventions.
+
+  adapters:
+    - stack: "php-symfony-doctrine"
+      adapter-id: "DB-002-PHP-SYM44-MYSQL8"
+
+  profile_constraints:
+    - "php:^7.1.3"
+    - "symfony/framework-bundle:~4.4"
+    - "doctrine/orm:^2.6"
+    - "doctrine/doctrine-bundle:^1.12"
+    - "doctrine/dbal:>=2.10"
+    - "mysql:>=8.0"
+
+  # NOTE: static-analysis level below is a placeholder default. Where the
+  # Profile already declares an actual configured PHPStan level, that value
+  # takes precedence.
+  quality_gates:
+    - "static-analysis:phpstan-level-6"
+    - "test:unit-passing"
+    - "schema:no-reserved-word-identifiers"
+
+  token_budget:
+    planning: 2000
+    implementation: 4000
+    validation: 1500
+
+  security_constraints:
+    - "input-validation-required"

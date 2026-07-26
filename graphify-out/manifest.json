@@ -1,0 +1,94 @@
+{
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/cli.py": {
+    "mtime": 1785101478.0,
+    "hash": "e82d1978d38c526ba1c6f62a2d011e87"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/__init__.py": {
+    "mtime": 1785101355.0,
+    "hash": "213e3573c707a01a53bb63e68f650eb6"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/capability/__init__.py": {
+    "mtime": 1785101357.0,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/capability/loader.py": {
+    "mtime": 1785101364.0,
+    "hash": "1118b9c6a53b02b78013b4b53b9aa564"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/capability/validator.py": {
+    "mtime": 1785101377.0,
+    "hash": "cef84fd2c6a866860faec09bbfde9f4d"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/profile/__init__.py": {
+    "mtime": 1785101418.0,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/profile/_discovery_impl.py": {
+    "mtime": 1785101570.0,
+    "hash": "bb6fb59836235958dfbd9dec0fccf51b"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/profile/validator.py": {
+    "mtime": 1785101442.0,
+    "hash": "4d6ebf436fcf037728eb97e68e492032"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/catalog/__init__.py": {
+    "mtime": 1785101381.0,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/src/acsdd/catalog/builder.py": {
+    "mtime": 1785101410.0,
+    "hash": "0fc2e57af5bea018b9509a9d0ecd1f7c"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/tests/test_capability.py": {
+    "mtime": 1785101602.0,
+    "hash": "b2bfa2822b11e6b29c91ecf940635f3f"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/tests/__init__.py": {
+    "mtime": 1785101614.0,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/tests/test_profile.py": {
+    "mtime": 1785101608.0,
+    "hash": "6dfae5d1cbaaf5275fea312f81524362"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/README.md": {
+    "mtime": 1785101630.0,
+    "hash": "158ce5623020bc174d6809423932a637"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/capabilities/CATALOG.md": {
+    "mtime": 1785101639.0,
+    "hash": "4cc629fb01492153a9d13b0e275079ef"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/capabilities/database/create-doctrine-entity.md": {
+    "mtime": 1785101328.0,
+    "hash": "6909dd1455e53440ebd5c08cd884931a"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/capabilities/database/create-doctrine-migration.md": {
+    "mtime": 1785101328.0,
+    "hash": "7b57cd4b2771989bc79928e1737c7e37"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/capabilities/database/identify-doctrine-entities.md": {
+    "mtime": 1785101328.0,
+    "hash": "f3821b06450eda98167ab0a34142e038"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/capabilities/database/update-doctrine-entity.md": {
+    "mtime": 1785101328.0,
+    "hash": "41744e8c775a1bb5e34bb5c4c424c324"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/capabilities/_manifests/DB-001.yaml": {
+    "mtime": 1785101328.0,
+    "hash": "11ba7bd8c4918b58d7faa242981203e0"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/capabilities/_manifests/DB-003.yaml": {
+    "mtime": 1785101328.0,
+    "hash": "8fbc7197f20af15eac19a65cb320da96"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/capabilities/_manifests/DB-002.yaml": {
+    "mtime": 1785101328.0,
+    "hash": "b2d8fd0c7e42216b9ae75b7ca8770c84"
+  },
+  "/home/jaime/Documents/projects/acsdd_cli/capabilities/_manifests/DB-004.yaml": {
+    "mtime": 1785101328.0,
+    "hash": "f66a3529ed067fe78859fb4b843b70dc"
+  }
+}

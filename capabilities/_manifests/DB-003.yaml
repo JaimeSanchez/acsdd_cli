@@ -1,0 +1,66 @@
+capability:
+  id: "DB-003"
+  version: "1.0.0"
+  name: "Update Doctrine Entity"
+  category: "DB"
+  description: >
+    Applies additive/modifying changes to an existing Doctrine entity — add
+    fields, add relations, widen a column, add an index — as a targeted
+    edit that preserves unrelated annotations and formatting. Field
+    narrowing, removal, or relation removal is rejected: this capability is
+    deliberately non-destructive. Does not run a migration — that is
+    DB-004's responsibility.
+
+  inputs:
+    - name: "target-entity"
+      type: "string"
+      required: true
+      description: >
+        Fully-qualified entity class name being updated (e.g.
+        App\Entity\Invoice). Must already exist in the DB-001 inventory.
+    - name: "entity-spec"
+      type: "spec-ref"
+      required: true
+      description: "Specification describing the fields/relations to add or modify."
+
+  outputs:
+    - name: "entity-file"
+      type: "file-path"
+      pattern: "src/Entity/*.php"
+    - name: "diff-report"
+      type: "markdown"
+      pattern: "reports/DB-003-diff-*.md"
+
+  dependencies:
+    - capability: "DB-001"
+      version: ">=1.0.0"
+      reason: >
+        Requires the current entity inventory to validate the target entity
+        exists and to diff the proposed changes against its current fields.
+
+  adapters:
+    - stack: "php-symfony-doctrine"
+      adapter-id: "DB-003-PHP-SYM44-MYSQL8"
+
+  profile_constraints:
+    - "php:^7.1.3"
+    - "symfony/framework-bundle:~4.4"
+    - "doctrine/orm:^2.6"
+    - "doctrine/doctrine-bundle:^1.12"
+    - "doctrine/dbal:>=2.10"
+    - "mysql:>=8.0"
+
+  quality_gates:
+    - "static-analysis:phpstan-level-6"
+    - "test:unit-passing"
+    - "schema:no-destructive-diff"
+    - "schema:no-reserved-word-identifiers"
+
+  token_budget:
+    planning: 2000
+    implementation: 4000
+    validation: 1500
+
+  security_constraints:
+    - "input-validation-required"
+    - "no-destructive-schema-changes"
