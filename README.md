@@ -111,18 +111,19 @@ and a category (`PLAN`, `PROFILE`, `DB`, `BE`, `FE`, `TEST`, `DOC`,
 `DEVOPS`, `SEC`, `REF`):
 
 ```bash
-acsdd capability generate \
-  --profile ./acsdd/profiles/my-project.yaml \
-  --id BE-001 --category BE
+acsdd capability generate --id BE-001 --category BE
 ```
 
-This auto-creates `capabilities/_manifests/` (and a matching procedure-doc
-folder) the first time you run it, pre-fills everything derivable from the
-profile (adapter stack, profile constraints, quality gates), and leaves the
-parts that require actual knowledge of the specific capability — name,
-description, concrete inputs/outputs — as `[REVIEW REQUIRED]` placeholders.
-Fill those in yourself, or hand the draft manifest + your codebase to an AI
-coding agent and ask it to complete them.
+`--profile` is optional here too — omit it and acsdd looks under
+`./acsdd/profiles` for you, preferring the finalized profile over a draft
+if both exist (pass `--profile PATH` explicitly if you have more than one
+profile there and need to pick). This auto-creates `capabilities/_manifests/`
+(and a matching procedure-doc folder) the first time you run it, pre-fills
+everything derivable from the profile (adapter stack, profile constraints,
+quality gates), and leaves the parts that require actual knowledge of the
+specific capability — name, description, concrete inputs/outputs — as
+`[REVIEW REQUIRED]` placeholders. Fill those in yourself, or hand the draft
+manifest + your codebase to an AI coding agent and ask it to complete them.
 
 **6. Validate the manifest, then rebuild the catalog:**
 
@@ -147,7 +148,8 @@ acsdd capability validate path/to/X.yaml  # validate a single manifest
 acsdd capability list                     # table of every capability found
 acsdd capability list --category DB       # filtered
 acsdd capability show DB-004              # full manifest + resolved dependency chain
-acsdd capability generate --profile P --id BE-005 --category BE  # scaffold a new draft manifest
+acsdd capability generate --id BE-005 --category BE   # --profile defaults to ./acsdd/profiles
+acsdd capability generate --profile P --id BE-005 --category BE  # or set it explicitly
 ```
 
 `validate` checks two things:

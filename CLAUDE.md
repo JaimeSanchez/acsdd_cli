@@ -37,8 +37,8 @@ acsdd profile discover /path/to/repo   # --profile-id defaults to the dir name (
 acsdd profile discover /path/to/my-project
 # ...fill in any [REVIEW REQUIRED] fields in the draft, then:
 acsdd profile create --draft acsdd/profiles/my-project-draft.yaml
-acsdd capability generate --profile acsdd/profiles/my-project.yaml \
-  --id BE-001 --category BE
+# --profile below defaults to the single profile under ./acsdd/profiles
+acsdd capability generate --id BE-001 --category BE
 
 # Build the standalone PyInstaller binary locally
 pip install . pyinstaller
@@ -66,6 +66,14 @@ Manifests directory resolution (`_default_capabilities_dir` in `cli.py`)
 walks up from `cwd` looking for `capabilities/_manifests`, so the CLI works
 from any subdirectory of a project that has adopted the ACSDD layout — don't
 hardcode `./capabilities` elsewhere.
+
+Profile auto-detection (`_default_profile_path` in `cli.py`, used by
+`capability generate` when `--profile` is omitted) only looks in
+`./acsdd/profiles` — cwd-relative, no walk-up — matching `profile
+discover`'s own `--output` default exactly. It prefers a finalized profile
+(`<id>.yaml`) over a draft (`<id>-draft.yaml`), and deliberately returns
+`None` (forcing an explicit `--profile`) rather than guessing whenever more
+than one plausible candidate exists.
 
 **`capability/`** — manifest loading, validation, and generation.
 - `loader.py`: `load_manifest`/`iter_manifests` — YAML I/O only, no schema

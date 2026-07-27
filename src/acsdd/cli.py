@@ -35,6 +35,26 @@ def _default_capabilities_dir() -> Path:
     return cwd / "capabilities"
 
 
+def _default_profile_path() -> Optional[Path]:
+    """Looks for a single profile YAML under ./acsdd/profiles — the default
+    output location `profile discover`/`profile create` already write to —
+    so a repo that's been onboarded doesn't need --profile spelled out by
+    hand. Prefers a finalized profile (<id>.yaml) over a draft
+    (<id>-draft.yaml); returns None (rather than guessing) whenever there's
+    more than one plausible candidate."""
+    profiles_dir = Path.cwd() / "acsdd" / "profiles"
+    if not profiles_dir.is_dir():
+        return None
+
+    candidates = sorted(profiles_dir.glob("*.yaml"))
+    finalized = [c for c in candidates if not c.name.endswith("-draft.yaml")]
+    if len(finalized) == 1:
+        return finalized[0]
+    if not finalized and len(candidates) == 1:
+        return candidates[0]
+    return None
+
+
 @click.group()
 @click.version_option(version=__version__)
 def cli():
@@ -209,8 +229,8 @@ _CAP_ID_PATTERN = r"^[A-Z]{2,4}-[0-9]{3}$"
 
 
 @capability.command("generate")
-@click.option("--profile", "profile_path", type=click.Path(exists=True, path_type=Path), required=True,
-              help="Path to a profile YAML (draft or completed) produced by `acsdd profile discover`.")
+@click.option("--profile", "profile_path", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Path to a profile YAML (default: auto-detected single profile under ./acsdd/profiles).")
 @click.option("--id", "cap_id", required=True, help="Capability id, e.g. BE-005.")
 @click.option("--category", required=True, type=click.Choice(CATEGORY_ORDER))
 @click.option("--name", default=None, help="Human-readable name (optional; left as a placeholder if omitted).")
@@ -218,7 +238,7 @@ _CAP_ID_PATTERN = r"^[A-Z]{2,4}-[0-9]{3}$"
               help="Root capabilities/ directory (default: auto-detected, created if missing).")
 @click.option("--force", is_flag=True, default=False,
               help="Overwrite an existing manifest and/or procedure-doc stub.")
-def capability_generate(profile_path: Path, cap_id: str, category: str, name: Optional[str],
+def capability_generate(profile_path: Optional[Path], cap_id: str, category: str, name: Optional[str],
                          capabilities_dir: Optional[Path], force: bool):
     """Scaffold a new draft capability manifest from a profile.
 
@@ -230,6 +250,17 @@ def capability_generate(profile_path: Path, cap_id: str, category: str, name: Op
     if not re.match(_CAP_ID_PATTERN, cap_id):
         click.secho(f"Invalid --id '{cap_id}' — expected a pattern like BE-005.", fg="red")
         sys.exit(1)
+
+    if profile_path is None:
+        profile_path = _default_profile_path()
+        if profile_path is None:
+            click.secho(
+                "ERROR: no --profile given and couldn't auto-detect one under ./acsdd/profiles.",
+                fg="red",
+            )
+            click.echo("Run `acsdd profile discover .` first, or pass --profile explicitly.")
+            sys.exit(1)
+        click.echo(f"No --profile given, using: {profile_path}")
 
     import yaml as _yaml
     profile_doc = _yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
