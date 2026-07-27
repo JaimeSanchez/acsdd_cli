@@ -38,28 +38,70 @@ pip install -e ".[dev]"
 
 Requires Python 3.10+. Installs the `acsdd` command on your PATH.
 
-## Quickstart: onboarding a new repository
+## Quickstart
 
-Two commands take a repository from nothing to a first draft capability
-manifest:
+This is the full path from "just installed" to a working ACSDD setup in your
+own repository. Run every command below **from the root of your repo**
+(that's what lets acsdd auto-detect paths instead of you passing them by
+hand).
+
+**1. Install** — see [Install](#install) above.
+
+**2. Generate the repo's engineering profile.** This scans your repo (stack,
+conventions, architecture pattern, health) and writes a draft profile —
+nothing in your repo is modified:
 
 ```bash
-# 1. Characterize the repo: stack, conventions, architecture, health.
-acsdd profile discover /path/to/repo --profile-id my-project
+cd /path/to/your-repo
+acsdd profile discover . --profile-id my-project
+```
 
-# 2. Scaffold a draft capability manifest from that profile.
+This writes three files under `./acsdd/profiles/`:
+`my-project-draft.yaml` (the profile itself), a discovery report, and a
+recommendations doc. Detection is best-effort — open the draft YAML and fill
+in any `[REVIEW REQUIRED]` fields it couldn't determine on its own (e.g. an
+unusual stack, or a database engine it couldn't find a connection string
+for) before moving on.
+
+**3. Validate the profile:**
+
+```bash
+acsdd profile validate ./acsdd/profiles/my-project-draft.yaml
+```
+
+**4. Generate a capability manifest from that profile.** Do this once per
+capability you want to define (an `AI-Collaborative` "unit of work" your
+repo supports, like "run database migrations" or "generate an API
+controller"). Pick an id (`<2-4 letter category>-<3 digits>`, e.g. `BE-001`)
+and a category (`PLAN`, `PROFILE`, `DB`, `BE`, `FE`, `TEST`, `DOC`,
+`DEVOPS`, `SEC`, `REF`):
+
+```bash
 acsdd capability generate \
   --profile ./acsdd/profiles/my-project-draft.yaml \
   --id BE-001 --category BE
 ```
 
-`capability generate` auto-creates `capabilities/_manifests/` (and a
-matching procedure-doc folder) if they don't exist yet, pre-fills everything
-derivable from the profile (adapter stack, profile constraints, quality
-gates), and leaves the parts that require actual knowledge of the specific
-capability — name, description, concrete inputs/outputs — as
-`[REVIEW REQUIRED]` placeholders for a human or an AI coding agent to
-complete. Run it once per capability you want to add.
+This auto-creates `capabilities/_manifests/` (and a matching procedure-doc
+folder) the first time you run it, pre-fills everything derivable from the
+profile (adapter stack, profile constraints, quality gates), and leaves the
+parts that require actual knowledge of the specific capability — name,
+description, concrete inputs/outputs — as `[REVIEW REQUIRED]` placeholders.
+Fill those in yourself, or hand the draft manifest + your codebase to an AI
+coding agent and ask it to complete them.
+
+**5. Validate the manifest, then rebuild the catalog:**
+
+```bash
+acsdd capability validate
+acsdd catalog build
+```
+
+`acsdd catalog build` regenerates `capabilities/CATALOG.md` from every
+manifest under `_manifests/` — repeat steps 4-5 for each new capability, and
+re-run `catalog build` any time you add, version, or deprecate one. Wire
+`acsdd catalog verify` into CI (see [`acsdd catalog`](#acsdd-catalog) below)
+so a stale catalog or an invalid manifest fails the build automatically.
 
 ## Commands
 
