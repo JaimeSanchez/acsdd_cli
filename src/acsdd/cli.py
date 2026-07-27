@@ -3,7 +3,10 @@
 Subcommand groups:
   acsdd capability   validate / list / show / generate
   acsdd catalog      build / verify
-  acsdd profile      discover / validate
+  acsdd profile      discover / validate / create
+
+Top-level commands:
+  acsdd update       self-update the standalone binary install
 """
 
 import sys
@@ -36,6 +39,30 @@ def _default_capabilities_dir() -> Path:
 @click.version_option(version=__version__)
 def cli():
     """ACSDD — AI-Collaborative Software Development & Delivery CLI."""
+
+
+@cli.command("update")
+@click.option("--version", "version_tag", default=None,
+              help="Specific release tag to install, e.g. v0.2.0 (default: latest).")
+@click.option("--repo", default=None,
+              help="GitHub owner/repo to update from (default: JaimeSanchez/acsdd_cli).")
+def update(version_tag: Optional[str], repo: Optional[str]):
+    """Update the standalone acsdd binary in place to the latest release.
+
+    Only works for the curl-installed binary — for a source install, use
+    `pip install --upgrade acsdd` or `git pull` instead.
+    """
+    from acsdd.update import perform_update, UpdateError, DEFAULT_REPO
+
+    click.echo(f"Current version: {__version__}")
+    try:
+        tag = perform_update(repo=repo or DEFAULT_REPO, version=version_tag)
+    except UpdateError as e:
+        click.secho(f"ERROR: {e}", fg="red")
+        sys.exit(1)
+
+    click.secho(f"Updated to {tag}.", fg="green")
+    click.echo("Re-run `acsdd --version` to confirm.")
 
 
 # ---------------------------------------------------------------------

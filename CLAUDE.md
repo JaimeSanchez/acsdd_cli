@@ -44,6 +44,10 @@ acsdd capability generate --profile acsdd/profiles/my-project.yaml \
 pip install . pyinstaller
 pyinstaller packaging/acsdd.spec --distpath dist --workpath build --clean
 ./dist/acsdd --version
+
+# Self-update a standalone binary install in place (no-op / errors on a
+# source install — see src/acsdd/update.py)
+acsdd update
 ```
 
 There is no lint/format tooling configured in `pyproject.toml` — don't
@@ -52,11 +56,11 @@ invent a lint step.
 ## Architecture
 
 **Entry point:** `src/acsdd/cli.py` defines one Click group (`acsdd`) with
-three subcommand groups — `capability`, `catalog`, `profile` — that are thin
-wrappers: they resolve a manifests directory, call into the matching
-non-CLI module below, and format output. Keep business logic out of
-`cli.py`; put it in the module it belongs to so it stays testable without
-invoking Click.
+three subcommand groups — `capability`, `catalog`, `profile` — plus one
+top-level command, `update` — that are thin wrappers: they resolve a
+manifests directory, call into the matching non-CLI module below, and format
+output. Keep business logic out of `cli.py`; put it in the module it belongs
+to so it stays testable without invoking Click.
 
 Manifests directory resolution (`_default_capabilities_dir` in `cli.py`)
 walks up from `cwd` looking for `capabilities/_manifests`, so the CLI works
@@ -117,6 +121,20 @@ drifted, or if any manifest is invalid.
   is the only place in the codebase that ever changes a profile's status
   away from `"draft"`.
 
+**`update.py`** — backs `acsdd update`, self-updating a standalone binary
+install in place. Guarded by `is_frozen_binary()` (PyInstaller's `sys.frozen`
+marker) — refuses to run under a source/pip install, since there's no
+single executable file to replace there. Reimplements `install.sh`'s
+platform-detection/download/checksum-verify steps in Python (stdlib
+`urllib`, no `curl` dependency at runtime) rather than shelling out to the
+script; downloads to a temp dir *inside* the existing binary's directory
+(`tempfile.TemporaryDirectory(dir=current_exe.parent)`) so the final
+`os.replace()` onto the running executable is an atomic same-filesystem
+rename, safe to do while the old binary is still executing. The asset
+naming convention (`acsdd-{os}-{arch}`) is duplicated between `install.sh`
+and this module — if `release.yml`'s matrix or target naming ever changes,
+update both.
+
 **`schemas/`** — the two JSON Schemas are loaded at runtime via
 `importlib.resources.files("acsdd.schemas")`, not by relative filesystem
 path. Any new schema file must be added to
@@ -148,7 +166,10 @@ source path, but only building the binary
 
 Tests live in `tests/`, generally one file per package (`test_capability.py`,
 `test_profile.py`, `test_discovery.py`, `test_capability_generator.py`,
-`test_profile_generator.py`), plain `pytest` functions (no test classes). A
+`test_profile_generator.py`, `test_update.py`), plain `pytest` functions (no
+test classes). `test_update.py` monkeypatches `is_frozen_binary`/
+`detect_platform`/`_download` rather than hitting the network or a real
+binary — keep that pattern for any future changes there. A
 `real_manifests_dir` fixture
 (see `tests/test_capability.py`) points at the actual
 `capabilities/_manifests/` example data — several tests validate against

@@ -32,6 +32,19 @@ arm64 only — no Intel Mac binary; GitHub's hosted Intel macOS runners have
 become too unreliable to build on). Windows isn't supported yet. On an
 unsupported combination, install from source instead (below).
 
+To update an existing binary install to the latest release in place:
+
+```bash
+acsdd update
+```
+
+Pin a specific release the same way `install.sh` does:
+`acsdd update --version v0.2.0`. This only works for the binary install —
+re-running `curl ... | sh` works too, but `acsdd update` doesn't need `curl`
+on your PATH. For a source install, use `pip install --upgrade` or
+`git pull` instead; `acsdd update` refuses to run there (there's no single
+binary file for it to replace).
+
 ### From source (contributors / development)
 
 ```bash
@@ -179,6 +192,19 @@ profile (listing exactly which fields), and otherwise writes a finalized
 profile (`status: active`, version bumped) alongside the draft, ready to
 hand to `capability generate`.
 
+### `acsdd update`
+
+```bash
+acsdd update                    # update the binary install to the latest release
+acsdd update --version v0.2.0   # pin a specific release
+```
+
+Only works for the standalone binary install (detects PyInstaller's
+`sys.frozen` marker) — downloads the matching platform asset straight from
+GitHub Releases, verifies its checksum, and atomically replaces the running
+binary in place. Refuses to run on a source install; use
+`pip install --upgrade` or `git pull` there instead.
+
 ## Project layout
 
 ```
@@ -190,11 +216,12 @@ acsdd-cli/
 ├── .github/workflows/release.yml  # builds + publishes binaries on a version tag
 ├── src/acsdd/
 │   ├── cli.py                     # click commands
+│   ├── update.py                  # self-update for the standalone binary
 │   ├── schemas/                   # Appendix A & B JSON Schemas
 │   ├── capability/                # manifest loading + validation + generation
 │   ├── catalog/                   # CATALOG.md generation
-│   └── profile/                   # repo discovery + profile validation
-├── tests/                         # pytest suite (42 tests)
+│   └── profile/                   # repo discovery + profile validation/finalization
+├── tests/                         # pytest suite (51 tests)
 └── capabilities/                  # example data: 4 real capability manifests + docs
     ├── CATALOG.md                 # generated — run `acsdd catalog build` to refresh
     ├── _manifests/
