@@ -36,6 +36,13 @@ case "$os" in
         ;;
 esac
 
+if [ "$os" = "darwin" ] && [ "$arch" = "x86_64" ]; then
+    echo "error: no prebuilt binary for Intel macOS (darwin/x86_64)." >&2
+    echo "acsdd ships macOS binaries for Apple Silicon (arm64) only." >&2
+    echo "Install from source instead: pip install -e \".[dev]\" (see README)." >&2
+    exit 1
+fi
+
 asset="acsdd-${os}-${arch}"
 
 if [ -n "$ACSDD_VERSION" ]; then

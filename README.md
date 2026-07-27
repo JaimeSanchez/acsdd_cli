@@ -27,8 +27,10 @@ To pin a specific version instead of installing latest:
 ACSDD_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/JaimeSanchez/acsdd_cli/main/install.sh | sh
 ```
 
-Binaries are built for Linux and macOS on x86_64 and arm64. Windows isn't
-supported yet.
+Binaries are built for Linux (x86_64 and arm64) and macOS (Apple Silicon /
+arm64 only — no Intel Mac binary; GitHub's hosted Intel macOS runners have
+become too unreliable to build on). Windows isn't supported yet. On an
+unsupported combination, install from source instead (below).
 
 ### From source (contributors / development)
 

@@ -17,8 +17,12 @@ jobs:
             target: linux-arm64
           - os: macos-14
             target: darwin-arm64
-          - os: macos-13
-            target: darwin-x86_64
+          # Intel macOS (macos-13) intentionally omitted: GitHub has been
+          # winding down hosted Intel Mac runner capacity, and jobs on that
+          # label can queue indefinitely, blocking the whole release (this
+          # job gates `release` via `needs: build`). Apple Silicon (arm64)
+          # covers current Macs; add an Intel target back only if you have
+          # a dedicated/self-hosted runner for it.
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
