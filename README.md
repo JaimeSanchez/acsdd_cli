@@ -67,16 +67,18 @@ conventions, architecture pattern, health) and writes a draft profile —
 nothing in your repo is modified:
 
 ```bash
-cd /path/to/your-repo
-acsdd profile discover . --profile-id my-project
+cd /path/to/my-project
+acsdd profile discover .
 ```
 
-This writes three files under `./acsdd/profiles/`:
-`my-project-draft.yaml` (the profile itself), a discovery report, and a
-recommendations doc. Detection is best-effort — open the draft YAML and fill
-in any `[REVIEW REQUIRED]` fields it couldn't determine on its own (e.g. an
-unusual stack, or a database engine it couldn't find a connection string
-for) before moving on.
+`--profile-id` is optional — omit it and acsdd uses your repo directory's
+name (`my-project` here); pass `--profile-id something-else` to override it.
+This writes three files under `./acsdd/profiles/`: `my-project-draft.yaml`
+(the profile itself), a discovery report, and a recommendations doc.
+Detection is best-effort — open the draft YAML and fill in any
+`[REVIEW REQUIRED]` fields it couldn't determine on its own (e.g. an unusual
+stack, or a database engine it couldn't find a connection string for)
+before moving on.
 
 **3. Validate the profile against the schema:**
 
@@ -173,7 +175,8 @@ catalog fails the build instead of silently drifting from reality.
 ### `acsdd profile`
 
 ```bash
-acsdd profile discover /path/to/repo --profile-id my-project
+acsdd profile discover /path/to/repo                        # --profile-id defaults to the dir name
+acsdd profile discover /path/to/repo --profile-id my-project # or set it explicitly
 acsdd profile validate acsdd/profiles/my-project-draft.yaml
 acsdd profile create --draft acsdd/profiles/my-project-draft.yaml
 ```

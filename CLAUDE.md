@@ -28,13 +28,13 @@ pytest tests/test_capability.py::test_validate_catalog_circular_dependency
 # Exercise the CLI against the repo's own example data
 acsdd capability validate
 acsdd catalog verify
-acsdd profile discover /path/to/repo --profile-id my-project
+acsdd profile discover /path/to/repo   # --profile-id defaults to the dir name (here: "repo")
 
 # Onboarding a brand-new repo: discover its profile, review + finalize it,
 # then scaffold a draft capability manifest from it (auto-creates
 # capabilities/_manifests/ if missing) — the workflow this tool is
 # designed around.
-acsdd profile discover /path/to/repo --profile-id my-project
+acsdd profile discover /path/to/my-project
 # ...fill in any [REVIEW REQUIRED] fields in the draft, then:
 acsdd profile create --draft acsdd/profiles/my-project-draft.yaml
 acsdd capability generate --profile acsdd/profiles/my-project.yaml \

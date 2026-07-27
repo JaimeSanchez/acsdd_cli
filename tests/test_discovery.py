@@ -138,6 +138,21 @@ def test_profile_discover_refuses_overwrite_without_force(tmp_path):
     assert forced.exit_code == 0, forced.output
 
 
+def test_profile_discover_defaults_profile_id_to_repo_dir_name(tmp_path):
+    repo_dir = tmp_path / "my-cool-project"
+    repo_dir.mkdir()
+    _build_symfony_ddd_fixture(repo_dir)
+    output_dir = tmp_path / "profiles"
+    runner = CliRunner()
+
+    result = runner.invoke(cli, [
+        "profile", "discover", str(repo_dir), "--output", str(output_dir),
+    ])
+    assert result.exit_code == 0, result.output
+    assert "using directory name: my-cool-project" in result.output
+    assert (output_dir / "my-cool-project-draft.yaml").exists()
+
+
 def test_profile_discover_depth_surface_skips_architecture_and_health(tmp_path):
     _build_symfony_ddd_fixture(tmp_path)
     output_dir = tmp_path / "profiles"

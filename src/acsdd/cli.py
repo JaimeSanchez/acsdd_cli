@@ -380,7 +380,8 @@ def profile():
 
 @profile.command("discover")
 @click.argument("repo_path", type=click.Path(exists=True, path_type=Path))
-@click.option("--profile-id", required=True)
+@click.option("--profile-id", default=None,
+              help="Profile identifier (default: the repo directory's name).")
 @click.option("--depth", default="deep", type=click.Choice(["surface", "deep"]))
 @click.option("--known-stack", default=None)
 @click.option("--target-version", default="0.2.0")
@@ -391,6 +392,10 @@ def profile_discover(repo_path, profile_id, depth, known_stack, target_version, 
     """Run PROFILE-001 discovery against REPO_PATH (wraps the existing
     profile-discovery implementation)."""
     from acsdd.profile._discovery_impl import main as discovery_main
+
+    if not profile_id:
+        profile_id = repo_path.resolve().name
+        click.echo(f"No --profile-id given, using directory name: {profile_id}")
 
     argv = [str(repo_path), "--profile-id", profile_id, "--depth", depth,
             "--target-version", target_version, "--output", output]
