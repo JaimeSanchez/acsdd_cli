@@ -52,7 +52,13 @@ jobs:
           ./dist/acsdd-${{ matrix.target }} catalog verify --capabilities-dir capabilities
 
       - name: Checksum
-        run: shasum -a 256 dist/acsdd-${{ matrix.target }} > dist/acsdd-${{ matrix.target }}.sha256
+        # Compute from inside dist/ so the checksum file records the bare
+        # filename (e.g. "acsdd-linux-x86_64"), not "dist/acsdd-...". The
+        # installer verifies against a flat temp directory with no dist/
+        # subdirectory, so a path-qualified checksum entry always fails
+        # `sha256sum -c` there, aborting the install under `set -e` before
+        # the binary is ever copied into place.
+        run: cd dist && shasum -a 256 "acsdd-${{ matrix.target }}" > "acsdd-${{ matrix.target }}.sha256"
 
       - uses: actions/upload-artifact@v4
         with:
