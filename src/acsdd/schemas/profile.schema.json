@@ -24,6 +24,7 @@
             "version": { "type": "string" },
             "framework": { "type": "string" },
             "orm": { "type": "string" },
+            "database": { "type": "string" },
             "frontend": { "type": "string" },
             "additional": {
               "type": "array",

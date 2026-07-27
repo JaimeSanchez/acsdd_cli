@@ -40,6 +40,9 @@ EXCLUDED_DIRS = {
     "node_modules", "vendor", ".git", "target", "build", "dist",
     ".next", ".nuxt", "__pycache__", ".venv", "venv", ".tox",
     "coverage", ".pytest_cache", ".mypy_cache", "bower_components",
+    # Output/cache directories left behind by AI-tooling runs (not
+    # dot-prefixed, so they'd otherwise be walked as application code).
+    "graphify-out",
 }
 
 # Common monorepo layout hints. When a single stack scan at the repo root
@@ -51,9 +54,13 @@ MONOREPO_SUBDIR_CANDIDATES = [
 ]
 
 
+def _is_excluded_dir(name: str) -> bool:
+    return name in EXCLUDED_DIRS or (name.startswith(".") and name != ".github")
+
+
 def prune_excluded_dirs(dirs: List[str]) -> None:
     """In-place filter for os.walk's dirs list, skipping vendored/build dirs."""
-    dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS and (not d.startswith(".") or d == ".github")]
+    dirs[:] = [d for d in dirs if not _is_excluded_dir(d)]
 
 
 class StackDetector:
@@ -340,6 +347,84 @@ class SymfonyStructureDetector:
         return None
 
 
+class DatabaseDetector:
+    """Stack-agnostic detection of the database engine actually in use.
+
+    ORM/framework signatures (e.g. SymfonyStructureDetector's ``orm:
+    doctrine``) only say *how* the app talks to a database, not *which*
+    one — Doctrine, SQLAlchemy, and ActiveRecord all support multiple
+    engines, and the tool's own bundled example capabilities assume MySQL
+    while plenty of real Symfony/Doctrine repos run PostgreSQL. This checks
+    the artifacts that actually pin down the choice: a DATABASE_URL-style
+    connection string in an env file, or a docker-compose service image.
+    """
+
+    _ENV_FILES = [".env", ".env.dist", ".env.example", ".env.test"]
+    _COMPOSE_FILES = [
+        "docker-compose.yml", "docker-compose.yaml",
+        "compose.yml", "compose.yaml",
+        "docker-compose.override.yml", "compose.override.yaml",
+    ]
+    _SCHEME_TO_ENGINE = {
+        "mysql": "mysql",
+        "postgres": "postgresql",
+        "postgresql": "postgresql",
+        "sqlite": "sqlite",
+        "sqlsrv": "sqlserver",
+        "mssql": "sqlserver",
+    }
+    _IMAGE_TO_ENGINE = {
+        "postgres": "postgresql",
+        "mysql": "mysql",
+        "mariadb": "mariadb",
+        "mongo": "mongodb",
+        "redis": "redis",
+    }
+
+    def __init__(self, repo_path: Path):
+        self.repo_path = repo_path
+
+    def detect(self) -> Optional[str]:
+        return self._from_env_files() or self._from_compose_files()
+
+    def _from_env_files(self) -> Optional[str]:
+        import re
+        for name in self._ENV_FILES:
+            path = self.repo_path / name
+            if not path.exists():
+                continue
+            try:
+                content = path.read_text(errors="ignore")
+            except Exception:
+                continue
+            match = re.search(r"DATABASE_URL\s*=\s*\"?([a-zA-Z][a-zA-Z0-9+]*)://", content)
+            if match:
+                scheme = match.group(1).split("+")[0].lower()
+                if scheme in self._SCHEME_TO_ENGINE:
+                    return self._SCHEME_TO_ENGINE[scheme]
+        return None
+
+    def _from_compose_files(self) -> Optional[str]:
+        import re
+        for name in self._COMPOSE_FILES:
+            path = self.repo_path / name
+            if not path.exists():
+                continue
+            try:
+                content = path.read_text(errors="ignore")
+            except Exception:
+                continue
+            for line in content.splitlines():
+                match = re.search(r"image:\s*[\"']?([a-zA-Z0-9._/-]+)", line)
+                if not match:
+                    continue
+                image = match.group(1).lower()
+                for keyword, engine in self._IMAGE_TO_ENGINE.items():
+                    if keyword in image:
+                        return engine
+        return None
+
+
 class ConventionDetector:
     """Detects code conventions and quality gates."""
 
@@ -350,6 +435,7 @@ class ConventionDetector:
         ".eslintrc.json": ("eslint", "linter"),
         "phpstan.neon": ("phpstan", "static-analysis"),
         "phpstan.neon.dist": ("phpstan", "static-analysis"),
+        "phpstan.dist.neon": ("phpstan", "static-analysis"),
         ".php_cs.dist": ("php-cs-fixer", "formatter"),
         ".php-cs-fixer.dist.php": ("php-cs-fixer", "formatter"),
         "phpcs.xml": ("phpcs", "linter"),
@@ -461,7 +547,13 @@ class ArchitectureDetector:
         self.repo_path = repo_path
 
     def detect(self) -> Tuple[str, float]:
-        """Returns (pattern, confidence)."""
+        """Returns (pattern, confidence). When two or more patterns tie for
+        the top score, ``pattern`` is a "+"-joined label (e.g.
+        "layered+hexagonal") naming all of them rather than silently picking
+        one by dict-insertion order — a real layout can legitimately match
+        more than one convention (e.g. Controller/Entity/Repository alongside
+        Domain/Application/Infrastructure), and reporting a single winner at
+        high confidence in that case is misleading."""
         src_dirs = self._find_source_dirs()
         if not src_dirs:
             return "unknown", 0.0
@@ -471,20 +563,36 @@ class ArchitectureDetector:
 
         for src_dir in src_dirs:
             for item in src_dir.iterdir():
-                if item.is_dir():
+                if item.is_dir() and not _is_excluded_dir(item.name):
                     total_dirs += 1
-                    name = item.name.lower()
+                    name = self._normalize(item.name)
                     for pattern, keywords in self.PATTERNS.items():
                         for kw in keywords:
-                            if kw.lower() in name or name in kw.lower():
+                            if self._normalize(kw) == name:
                                 scores[pattern] += 1
 
         if total_dirs == 0:
             return "unknown", 0.0
 
-        best = max(scores, key=scores.get)
-        confidence = min(scores[best] / max(total_dirs * 0.3, 1), 1.0)
+        max_score = max(scores.values())
+        if max_score == 0:
+            return "unknown", 0.0
+
+        best = "+".join(p for p in self.PATTERNS if scores[p] == max_score)
+        confidence = min(max_score / max(total_dirs * 0.3, 1), 1.0)
         return best, round(confidence, 2)
+
+    @staticmethod
+    def _normalize(token: str) -> str:
+        """Lowercase, strip a trailing slash and a trailing plural 's' so
+        singular/plural keyword variants (Controller/Controllers,
+        domain/domains) compare equal without resorting to an unanchored,
+        bidirectional substring match (which would let e.g. a directory
+        named "M" match several unrelated keywords)."""
+        token = token.lower().rstrip("/")
+        if len(token) > 1 and token.endswith("s"):
+            token = token[:-1]
+        return token
 
     def _find_source_dirs(self) -> List[Path]:
         candidates = [
@@ -636,7 +744,8 @@ class ProfileGenerator:
                  health: Dict, acsdd_version: str = "0.2.0",
                  frontend_stack: Optional[str] = None,
                  frontend_confidence: float = 0.0,
-                 symfony_info: Optional[Dict] = None):
+                 symfony_info: Optional[Dict] = None,
+                 database: Optional[str] = None):
         self.profile_id = profile_id
         self.stack = stack
         self.stack_info = stack_info
@@ -654,6 +763,9 @@ class ProfileGenerator:
         # SymfonyStructureDetector. Lets us auto-fill version/orm instead
         # of leaving them as [REVIEW REQUIRED] when confidently detected.
         self.symfony_info = symfony_info or {}
+        # From DatabaseDetector — independent of ORM/framework, since e.g.
+        # Doctrine/SQLAlchemy/ActiveRecord all support multiple engines.
+        self.database = database
 
     def generate(self) -> str:
         today = datetime.now().strftime("%Y-%m-%d")
@@ -706,6 +818,7 @@ class ProfileGenerator:
                     "version": version_value,
                     "framework": self.stack.split("-")[1] if "-" in self.stack else "unknown",
                     "orm": orm_value,
+                    "database": self.database or "[REVIEW REQUIRED — detect database engine]",
                     **({"frontend": frontend_value} if frontend_value is not None else {}),
                 },
                 "engineering_standards": {
@@ -1069,6 +1182,8 @@ def main(argv=None):
     parser.add_argument("--known-stack", default=None, help="Skip auto-detection")
     parser.add_argument("--target-version", default="0.2.0", help="ACSDD target version")
     parser.add_argument("--output", default="./acsdd/profiles", help="Output directory")
+    parser.add_argument("--force", action="store_true",
+                         help="Overwrite existing draft/report/recommendations files")
 
     args = parser.parse_args(argv)
 
@@ -1081,6 +1196,22 @@ def main(argv=None):
         print(f"WARNING: No .git directory found at {repo_path}. Proceeding anyway.")
 
     output_dir = Path(args.output)
+
+    # Discovery output is meant to be hand-edited (filling in [REVIEW
+    # REQUIRED] fields) before it's trusted — silently overwriting those
+    # edits on a re-run would destroy that work with no way back.
+    existing = [
+        output_dir / f"{args.profile_id}-draft.yaml",
+        output_dir / f"{args.profile_id}-discovery-report.md",
+        output_dir / f"{args.profile_id}-recommendations.md",
+    ]
+    existing = [p for p in existing if p.exists()]
+    if existing and not args.force:
+        print("ERROR: Output file(s) already exist — re-run with --force to overwrite:")
+        for p in existing:
+            print(f"   {p}")
+        sys.exit(1)
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"🔍 Analyzing repository: {repo_path}")
@@ -1146,20 +1277,40 @@ def main(argv=None):
         else:
             print(f"       → Symfony structure: {symfony_info['structure']} (version not pinned)")
 
+    database = DatabaseDetector(repo_path).detect()
+    if database:
+        print(f"       → Detected database: {database}")
+
     print("[2/4] Detecting conventions and quality gates...")
     conv_detector = ConventionDetector(repo_path)
     conventions = conv_detector.detect()
     print(f"       → Found {sum(len(v) for v in conventions.values())} configuration files")
 
-    print("[3/4] Detecting architecture patterns...")
-    arch_detector = ArchitectureDetector(repo_path)
-    architecture = arch_detector.detect()
-    print(f"       → Detected: {architecture[0]} (confidence: {architecture[1]:.0%})")
+    # ArchitectureDetector and HealthMetrics both walk the full repo tree —
+    # the two expensive passes. --depth surface skips them entirely rather
+    # than doing the same full walk regardless of the flag (which is what
+    # this used to do): the caller gets a fast stack+conventions-only pass
+    # and clearly-marked placeholders for the rest.
+    if args.depth == "surface":
+        print("[3/4] Skipping architecture detection (--depth surface)...")
+        architecture = ("[REVIEW REQUIRED — run --depth deep]", 0.0)
+        print("[4/4] Skipping repository health analysis (--depth surface)...")
+        health = {
+            "total_files": 0, "code_files": 0, "test_files": 0, "doc_files": 0,
+            "languages": Counter(), "has_readme": False, "has_contributing": False,
+            "has_changelog": False, "coverage": None,
+            "tech_debt_score": "[REVIEW REQUIRED — run --depth deep]",
+        }
+    else:
+        print("[3/4] Detecting architecture patterns...")
+        arch_detector = ArchitectureDetector(repo_path)
+        architecture = arch_detector.detect()
+        print(f"       → Detected: {architecture[0]} (confidence: {architecture[1]:.0%})")
 
-    print("[4/4] Analyzing repository health...")
-    health = HealthMetrics(repo_path).analyze()
-    print(f"       → {health['code_files']:,} code files, {health['test_files']:,} test files")
-    print(f"       → Tech debt: {health['tech_debt_score']}")
+        print("[4/4] Analyzing repository health...")
+        health = HealthMetrics(repo_path).analyze()
+        print(f"       → {health['code_files']:,} code files, {health['test_files']:,} test files")
+        print(f"       → Tech debt: {health['tech_debt_score']}")
     print()
 
     # Phase 2: Generation
@@ -1176,6 +1327,7 @@ def main(argv=None):
         frontend_stack=frontend_stack,
         frontend_confidence=frontend_confidence,
         symfony_info=symfony_info,
+        database=database,
     )
 
     profile_yaml = generator.generate()

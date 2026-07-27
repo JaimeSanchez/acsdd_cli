@@ -278,7 +278,9 @@ def profile():
 @click.option("--known-stack", default=None)
 @click.option("--target-version", default="0.2.0")
 @click.option("--output", default="./acsdd/profiles")
-def profile_discover(repo_path, profile_id, depth, known_stack, target_version, output):
+@click.option("--force", is_flag=True, default=False,
+              help="Overwrite existing draft/report/recommendations files")
+def profile_discover(repo_path, profile_id, depth, known_stack, target_version, output, force):
     """Run PROFILE-001 discovery against REPO_PATH (wraps the existing
     profile-discovery implementation)."""
     from acsdd.profile._discovery_impl import main as discovery_main
@@ -287,6 +289,8 @@ def profile_discover(repo_path, profile_id, depth, known_stack, target_version, 
             "--target-version", target_version, "--output", output]
     if known_stack:
         argv += ["--known-stack", known_stack]
+    if force:
+        argv += ["--force"]
     discovery_main(argv)
 
 
