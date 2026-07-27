@@ -65,13 +65,30 @@ in any `[REVIEW REQUIRED]` fields it couldn't determine on its own (e.g. an
 unusual stack, or a database engine it couldn't find a connection string
 for) before moving on.
 
-**3. Validate the profile:**
+**3. Validate the profile against the schema:**
 
 ```bash
 acsdd profile validate ./acsdd/profiles/my-project-draft.yaml
 ```
 
-**4. Generate a capability manifest from that profile.** Do this once per
+This only checks structural shape — it passes just as happily on a draft
+still full of `[REVIEW REQUIRED]` placeholders as it does on a fully-reviewed
+one. It won't tell you whether you're actually done reviewing; that's what
+the next step is for.
+
+**4. Finalize the profile once you've resolved every placeholder:**
+
+```bash
+acsdd profile create --draft ./acsdd/profiles/my-project-draft.yaml
+```
+
+This is the actual completeness gate: it refuses to run (listing exactly
+which fields) if any `[REVIEW REQUIRED]` placeholder remains anywhere in the
+profile. Once it's clean, it writes the finalized profile as
+`./acsdd/profiles/my-project.yaml` (`status: active`, version bumped to
+`1.0.0`) — this is the file to point at everything downstream from here.
+
+**5. Generate a capability manifest from that profile.** Do this once per
 capability you want to define (an `AI-Collaborative` "unit of work" your
 repo supports, like "run database migrations" or "generate an API
 controller"). Pick an id (`<2-4 letter category>-<3 digits>`, e.g. `BE-001`)
@@ -80,7 +97,7 @@ and a category (`PLAN`, `PROFILE`, `DB`, `BE`, `FE`, `TEST`, `DOC`,
 
 ```bash
 acsdd capability generate \
-  --profile ./acsdd/profiles/my-project-draft.yaml \
+  --profile ./acsdd/profiles/my-project.yaml \
   --id BE-001 --category BE
 ```
 
@@ -92,7 +109,7 @@ description, concrete inputs/outputs — as `[REVIEW REQUIRED]` placeholders.
 Fill those in yourself, or hand the draft manifest + your codebase to an AI
 coding agent and ask it to complete them.
 
-**5. Validate the manifest, then rebuild the catalog:**
+**6. Validate the manifest, then rebuild the catalog:**
 
 ```bash
 acsdd capability validate
@@ -100,7 +117,7 @@ acsdd catalog build
 ```
 
 `acsdd catalog build` regenerates `capabilities/CATALOG.md` from every
-manifest under `_manifests/` — repeat steps 4-5 for each new capability, and
+manifest under `_manifests/` — repeat steps 5-6 for each new capability, and
 re-run `catalog build` any time you add, version, or deprecate one. Wire
 `acsdd catalog verify` into CI (see [`acsdd catalog`](#acsdd-catalog) below)
 so a stale catalog or an invalid manifest fails the build automatically.
@@ -145,6 +162,7 @@ catalog fails the build instead of silently drifting from reality.
 ```bash
 acsdd profile discover /path/to/repo --profile-id my-project
 acsdd profile validate acsdd/profiles/my-project-draft.yaml
+acsdd profile create --draft acsdd/profiles/my-project-draft.yaml
 ```
 
 `discover` runs PROFILE-001 style repository discovery — detects the
@@ -153,7 +171,13 @@ conventions, architecture pattern, and repo health, then emits a draft
 Profile YAML, a discovery report, and a recommendations doc.
 
 `validate` checks the result against the Appendix B JSON Schema
-(`src/acsdd/schemas/profile.schema.json`).
+(`src/acsdd/schemas/profile.schema.json`) — structural shape only.
+
+`create` is the completeness gate `validate` doesn't provide: it refuses to
+run while any `[REVIEW REQUIRED]` placeholder remains anywhere in the
+profile (listing exactly which fields), and otherwise writes a finalized
+profile (`status: active`, version bumped) alongside the draft, ready to
+hand to `capability generate`.
 
 ## Project layout
 
@@ -170,7 +194,7 @@ acsdd-cli/
 │   ├── capability/                # manifest loading + validation + generation
 │   ├── catalog/                   # CATALOG.md generation
 │   └── profile/                   # repo discovery + profile validation
-├── tests/                         # pytest suite (34 tests)
+├── tests/                         # pytest suite (42 tests)
 └── capabilities/                  # example data: 4 real capability manifests + docs
     ├── CATALOG.md                 # generated — run `acsdd catalog build` to refresh
     ├── _manifests/

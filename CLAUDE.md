@@ -30,11 +30,14 @@ acsdd capability validate
 acsdd catalog verify
 acsdd profile discover /path/to/repo --profile-id my-project
 
-# Onboarding a brand-new repo: discover its profile, then scaffold a draft
-# capability manifest from it (auto-creates capabilities/_manifests/ if
-# missing) — the two-step workflow this tool is designed around.
+# Onboarding a brand-new repo: discover its profile, review + finalize it,
+# then scaffold a draft capability manifest from it (auto-creates
+# capabilities/_manifests/ if missing) — the workflow this tool is
+# designed around.
 acsdd profile discover /path/to/repo --profile-id my-project
-acsdd capability generate --profile acsdd/profiles/my-project-draft.yaml \
+# ...fill in any [REVIEW REQUIRED] fields in the draft, then:
+acsdd profile create --draft acsdd/profiles/my-project-draft.yaml
+acsdd capability generate --profile acsdd/profiles/my-project.yaml \
   --id BE-001 --category BE
 
 # Build the standalone PyInstaller binary locally
@@ -89,7 +92,7 @@ catalog verify` diffs a fresh render against the checked-in file (ignoring
 the `**Last generated:**` date) and fails if manifests and catalog have
 drifted, or if any manifest is invalid.
 
-**`profile/`** — repository discovery and profile validation.
+**`profile/`** — repository discovery, profile validation, and finalization.
 - `_discovery_impl.py` (the bulk of the logic, ~1000 lines) implements
   PROFILE-001 style discovery as a pipeline of detector classes:
   `StackDetector` → `SymfonyStructureDetector` (backend-specific
@@ -98,9 +101,21 @@ drifted, or if any manifest is invalid.
   `generate_discovery_report`/`generate_recommendations` render the
   findings to markdown. `cli.py`'s `profile discover` command calls
   `_discovery_impl.main()` in-process (not a subprocess) — there is no
-  separate script boundary here.
+  separate script boundary here. Every profile it emits has
+  `meta.status: "draft"` hardcoded — nothing in `_discovery_impl.py` ever
+  changes that.
 - `validator.py`: `validate_profile_file` — same JSON Schema pattern as
   `capability/validator.py`, against `schemas/profile.schema.json`.
+  Structural shape only — it has no concept of "is this profile actually
+  finished," which is why `generator.py` exists.
+- `generator.py`: backs `acsdd profile create`. `find_unresolved_fields`
+  recursively scans a profile dict for any string starting with
+  `"[REVIEW REQUIRED"` (prefix match, since `_discovery_impl.py` emits
+  varied suffixes) and returns their dotted/indexed paths; `finalize_profile`
+  (only called once that list is empty) flips `meta.status` to `"active"`
+  and bumps `meta.version` from the draft default `0.1.0` to `1.0.0` — this
+  is the only place in the codebase that ever changes a profile's status
+  away from `"draft"`.
 
 **`schemas/`** — the two JSON Schemas are loaded at runtime via
 `importlib.resources.files("acsdd.schemas")`, not by relative filesystem
@@ -116,9 +131,12 @@ in the standalone binary while working fine from source.
 2. **`curl -fsSL .../install.sh | sh`** — installs a prebuilt PyInstaller
    binary from GitHub Releases, no Python required. Built via
    `packaging/acsdd.spec` / `packaging/acsdd_entry.py`, published by
-   `.github/workflows/release.yml` on any `vX.Y.Z` tag push (matrix over
-   linux/macOS × x86_64/arm64, each binary smoke-tested against
-   `capabilities/` before upload, checksummed).
+   `.github/workflows/release.yml` on any `vX.Y.Z` tag push (linux x86_64 +
+   arm64, macOS Apple Silicon/arm64 only — Intel macOS was dropped after
+   GitHub's hosted `macos-13` runner sat queued indefinitely and blocked the
+   whole release, since the publish job needs every matrix leg to finish;
+   each binary is smoke-tested against `capabilities/` before upload,
+   checksummed).
 
 If you change how the CLI locates data files (schemas, or anything else
 loaded via `importlib.resources`), verify both paths: `pytest` covers the
@@ -129,8 +147,9 @@ source path, but only building the binary
 ## Testing conventions
 
 Tests live in `tests/`, generally one file per package (`test_capability.py`,
-`test_profile.py`, `test_discovery.py`, `test_capability_generator.py`),
-plain `pytest` functions (no test classes). A `real_manifests_dir` fixture
+`test_profile.py`, `test_discovery.py`, `test_capability_generator.py`,
+`test_profile_generator.py`), plain `pytest` functions (no test classes). A
+`real_manifests_dir` fixture
 (see `tests/test_capability.py`) points at the actual
 `capabilities/_manifests/` example data — several tests validate against
 that real data directly rather than only synthetic fixtures, so changes to

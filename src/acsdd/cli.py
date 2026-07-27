@@ -17,6 +17,7 @@ from acsdd.capability.generator import scaffold_manifest
 from acsdd.capability.loader import iter_manifests, ManifestLoadError
 from acsdd.capability.validator import validate_manifest, validate_catalog
 from acsdd.catalog.builder import build_catalog_markdown, CATEGORY_ORDER, CATEGORY_DOC_DIR
+from acsdd.profile.generator import find_unresolved_fields, finalize_profile
 from acsdd.profile.validator import validate_profile_file
 
 
@@ -371,6 +372,56 @@ def profile_discover(repo_path, profile_id, depth, known_stack, target_version, 
     if force:
         argv += ["--force"]
     discovery_main(argv)
+
+
+@profile.command("create")
+@click.option("--draft", "draft_path", type=click.Path(exists=True, path_type=Path), required=True,
+              help="Path to a reviewed draft profile YAML produced by `acsdd profile discover`.")
+@click.option("--output", type=click.Path(path_type=Path), default=None,
+              help="Output path (default: alongside --draft, named <profile-id>.yaml).")
+@click.option("--force", is_flag=True, default=False, help="Overwrite an existing output file.")
+def profile_create(draft_path: Path, output: Optional[Path], force: bool):
+    """Finalize a reviewed draft profile into an active one.
+
+    Refuses to finalize while any [REVIEW REQUIRED] placeholder remains
+    unresolved — that's the actual gate this command exists to provide,
+    since `profile validate` only checks schema shape.
+    """
+    result = validate_profile_file(draft_path)
+    if not result.ok:
+        click.secho(f"FAIL  {draft_path} does not pass schema validation:", fg="red")
+        for err in result.errors:
+            click.echo(f"  - {err}")
+        sys.exit(1)
+
+    import yaml as _yaml
+    data = _yaml.safe_load(draft_path.read_text(encoding="utf-8")) or {}
+    profile = data.get("profile", {}) or {}
+
+    unresolved = find_unresolved_fields(profile)
+    if unresolved:
+        click.secho(f"ERROR: {draft_path} still has unresolved [REVIEW REQUIRED] fields:", fg="red")
+        for path in unresolved:
+            click.echo(f"  - {path}")
+        click.echo("\nResolve these fields, then re-run `acsdd profile create`.")
+        sys.exit(1)
+
+    finalized = finalize_profile(profile)
+
+    if output is None:
+        profile_id = finalized.get("meta", {}).get("id") or draft_path.stem
+        output = draft_path.parent / f"{profile_id}.yaml"
+
+    if output.exists() and not force:
+        click.secho(f"ERROR: {output} already exists — re-run with --force to overwrite.", fg="red")
+        sys.exit(1)
+
+    output.write_text(
+        _yaml.dump({"profile": finalized}, default_flow_style=False, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    click.secho(f"Wrote {output}", fg="green")
+    click.echo(f"Next step: acsdd capability generate --profile {output} --id ID --category CAT")
 
 
 @profile.command("validate")
