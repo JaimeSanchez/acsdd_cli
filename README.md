@@ -38,6 +38,29 @@ pip install -e ".[dev]"
 
 Requires Python 3.10+. Installs the `acsdd` command on your PATH.
 
+## Quickstart: onboarding a new repository
+
+Two commands take a repository from nothing to a first draft capability
+manifest:
+
+```bash
+# 1. Characterize the repo: stack, conventions, architecture, health.
+acsdd profile discover /path/to/repo --profile-id my-project
+
+# 2. Scaffold a draft capability manifest from that profile.
+acsdd capability generate \
+  --profile ./acsdd/profiles/my-project-draft.yaml \
+  --id BE-001 --category BE
+```
+
+`capability generate` auto-creates `capabilities/_manifests/` (and a
+matching procedure-doc folder) if they don't exist yet, pre-fills everything
+derivable from the profile (adapter stack, profile constraints, quality
+gates), and leaves the parts that require actual knowledge of the specific
+capability — name, description, concrete inputs/outputs — as
+`[REVIEW REQUIRED]` placeholders for a human or an AI coding agent to
+complete. Run it once per capability you want to add.
+
 ## Commands
 
 ### `acsdd capability`
@@ -48,6 +71,7 @@ acsdd capability validate path/to/X.yaml  # validate a single manifest
 acsdd capability list                     # table of every capability found
 acsdd capability list --category DB       # filtered
 acsdd capability show DB-004              # full manifest + resolved dependency chain
+acsdd capability generate --profile P --id BE-005 --category BE  # scaffold a new draft manifest
 ```
 
 `validate` checks two things:
@@ -99,10 +123,10 @@ acsdd-cli/
 ├── src/acsdd/
 │   ├── cli.py                     # click commands
 │   ├── schemas/                   # Appendix A & B JSON Schemas
-│   ├── capability/                # manifest loading + validation
+│   ├── capability/                # manifest loading + validation + generation
 │   ├── catalog/                   # CATALOG.md generation
 │   └── profile/                   # repo discovery + profile validation
-├── tests/                         # pytest suite (18 tests)
+├── tests/                         # pytest suite (34 tests)
 └── capabilities/                  # example data: 4 real capability manifests + docs
     ├── CATALOG.md                 # generated — run `acsdd catalog build` to refresh
     ├── _manifests/

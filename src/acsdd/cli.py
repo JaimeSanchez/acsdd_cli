@@ -1,7 +1,7 @@
 """acsdd — command-line tool for the ACSDD framework.
 
 Subcommand groups:
-  acsdd capability   validate / list / show / graph
+  acsdd capability   validate / list / show / generate
   acsdd catalog      build / verify
   acsdd profile      discover / validate
 """
@@ -13,9 +13,10 @@ from typing import Dict, Optional
 import click
 
 from acsdd import __version__
+from acsdd.capability.generator import scaffold_manifest
 from acsdd.capability.loader import iter_manifests, ManifestLoadError
 from acsdd.capability.validator import validate_manifest, validate_catalog
-from acsdd.catalog.builder import build_catalog_markdown
+from acsdd.catalog.builder import build_catalog_markdown, CATEGORY_ORDER, CATEGORY_DOC_DIR
 from acsdd.profile.validator import validate_profile_file
 
 
@@ -174,6 +175,84 @@ def capability_show(capability_id: str, manifests_dir: Optional[Path]):
 
     if chain:
         click.echo("Resolved dependency chain: " + " -> ".join(chain))
+
+
+_CAP_ID_PATTERN = r"^[A-Z]{2,4}-[0-9]{3}$"
+
+
+@capability.command("generate")
+@click.option("--profile", "profile_path", type=click.Path(exists=True, path_type=Path), required=True,
+              help="Path to a profile YAML (draft or completed) produced by `acsdd profile discover`.")
+@click.option("--id", "cap_id", required=True, help="Capability id, e.g. BE-005.")
+@click.option("--category", required=True, type=click.Choice(CATEGORY_ORDER))
+@click.option("--name", default=None, help="Human-readable name (optional; left as a placeholder if omitted).")
+@click.option("--capabilities-dir", type=click.Path(path_type=Path), default=None,
+              help="Root capabilities/ directory (default: auto-detected, created if missing).")
+@click.option("--force", is_flag=True, default=False,
+              help="Overwrite an existing manifest and/or procedure-doc stub.")
+def capability_generate(profile_path: Path, cap_id: str, category: str, name: Optional[str],
+                         capabilities_dir: Optional[Path], force: bool):
+    """Scaffold a new draft capability manifest from a profile.
+
+    Fills in everything derivable from the profile (adapter stack, profile
+    constraints, quality gates); everything requiring actual knowledge of
+    this specific capability is left as a [REVIEW REQUIRED] placeholder.
+    """
+    import re
+    if not re.match(_CAP_ID_PATTERN, cap_id):
+        click.secho(f"Invalid --id '{cap_id}' — expected a pattern like BE-005.", fg="red")
+        sys.exit(1)
+
+    import yaml as _yaml
+    profile_doc = _yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
+    profile = profile_doc.get("profile", {}) or {}
+
+    capabilities_dir = capabilities_dir or _default_capabilities_dir()
+    manifests_dir = capabilities_dir / "_manifests"
+    manifests_dir.mkdir(parents=True, exist_ok=True)
+
+    manifest_path = manifests_dir / f"{cap_id}.yaml"
+    doc_dir = capabilities_dir / CATEGORY_DOC_DIR.get(category, category.lower())
+    doc_path = doc_dir / f"{cap_id.lower()}.md"
+
+    existing = [p for p in (manifest_path, doc_path) if p.exists()]
+    if existing and not force:
+        click.secho("ERROR: file(s) already exist — re-run with --force to overwrite:", fg="red")
+        for p in existing:
+            click.echo(f"   {p}")
+        sys.exit(1)
+
+    manifest = scaffold_manifest(profile, cap_id, category, name)
+    manifest_path.write_text(
+        _yaml.dump(manifest, default_flow_style=False, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    click.secho(f"Wrote {manifest_path}", fg="green")
+
+    doc_dir.mkdir(parents=True, exist_ok=True)
+    doc_path.write_text(
+        f"# {cap_id}\n\n"
+        f"**Manifest:** `_manifests/{cap_id}.yaml`\n\n"
+        "[REVIEW REQUIRED] — describe the procedure an AI agent follows to "
+        "execute this capability.\n",
+        encoding="utf-8",
+    )
+    click.secho(f"Wrote {doc_path}", fg="green")
+
+    result = validate_manifest(manifest_path, manifest)
+    if result.ok:
+        click.secho("Schema: valid draft (still has [REVIEW REQUIRED] fields to fill in)", fg="yellow")
+    else:
+        click.secho("Schema: FAILED — this shouldn't happen for a freshly scaffolded draft:", fg="red")
+        for err in result.errors:
+            click.echo(f"  - {err}")
+
+    click.echo()
+    click.echo("Next steps:")
+    click.echo(f"  1. Fill in name/description/inputs/outputs/adapter-id in {manifest_path}")
+    click.echo(f"  2. Write the procedure doc body in {doc_path}")
+    click.echo(f"  3. acsdd capability validate {manifest_path}")
+    click.echo("  4. acsdd catalog build")
 
 
 # ---------------------------------------------------------------------

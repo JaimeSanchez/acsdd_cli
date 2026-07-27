@@ -24,15 +24,21 @@ CATEGORY_LABELS = {
 }
 
 
+# Where a category's hand-written procedure docs live, relative to the
+# capabilities/ root. Shared with acsdd.capability.generator, which needs to
+# know where to scaffold a new doc stub using the same convention.
+CATEGORY_DOC_DIR = {
+    "DB": "database", "BE": "backend", "FE": "frontend", "TEST": "testing",
+    "DOC": "documentation", "DEVOPS": "devops", "SEC": "security",
+    "REF": "refactoring", "PLAN": "planning", "PROFILE": "profile",
+}
+
+
 def _doc_link(cap_id: str, category: str, docs_dir: Path, manifests_root: Path) -> str:
     """Best-effort: find a procedure doc under capabilities/<category-dir>/
     whose content mentions this capability id, so the catalog links to it
     without requiring a rigid naming convention."""
-    category_dir_name = {
-        "DB": "database", "BE": "backend", "FE": "frontend", "TEST": "testing",
-        "DOC": "documentation", "DEVOPS": "devops", "SEC": "security",
-        "REF": "refactoring", "PLAN": "planning", "PROFILE": "profile",
-    }.get(category, category.lower())
+    category_dir_name = CATEGORY_DOC_DIR.get(category, category.lower())
 
     category_dir = docs_dir / category_dir_name
     if not category_dir.is_dir():
