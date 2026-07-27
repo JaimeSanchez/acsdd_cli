@@ -36,8 +36,9 @@ acsdd profile discover /path/to/repo   # --profile-id defaults to the dir name (
 # designed around.
 acsdd profile discover /path/to/my-project
 # ...fill in any [REVIEW REQUIRED] fields in the draft, then:
+# (both --draft below and --profile further down default to whatever's
+# under ./acsdd/profiles — spelled out here only for clarity)
 acsdd profile create --draft acsdd/profiles/my-project-draft.yaml
-# --profile below defaults to the single profile under ./acsdd/profiles
 acsdd capability generate --id BE-001 --category BE
 
 # Build the standalone PyInstaller binary locally
@@ -68,12 +69,15 @@ from any subdirectory of a project that has adopted the ACSDD layout — don't
 hardcode `./capabilities` elsewhere.
 
 Profile auto-detection (`_default_profile_path` in `cli.py`, used by
-`capability generate` when `--profile` is omitted) only looks in
-`./acsdd/profiles` — cwd-relative, no walk-up — matching `profile
-discover`'s own `--output` default exactly. It prefers a finalized profile
-(`<id>.yaml`) over a draft (`<id>-draft.yaml`), and deliberately returns
-`None` (forcing an explicit `--profile`) rather than guessing whenever more
-than one plausible candidate exists.
+`capability generate` and `profile validate` when their path argument is
+omitted) only looks in `./acsdd/profiles` — cwd-relative, no walk-up —
+matching `profile discover`'s own `--output` default exactly. It prefers a
+finalized profile (`<id>.yaml`) over a draft (`<id>-draft.yaml`), and
+deliberately returns `None` (forcing an explicit path) rather than guessing
+whenever more than one plausible candidate exists. `_default_draft_profile_path`
+is the same idea for `profile create --draft`, but only ever matches
+`*-draft.yaml` — finalizing an already-finalized profile isn't the point of
+that command, so it must not silently pick one up.
 
 **`capability/`** — manifest loading, validation, and generation.
 - `loader.py`: `load_manifest`/`iter_manifests` — YAML I/O only, no schema

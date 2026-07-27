@@ -55,6 +55,21 @@ def _default_profile_path() -> Optional[Path]:
     return None
 
 
+def _default_draft_profile_path() -> Optional[Path]:
+    """Same idea as _default_profile_path, but for `profile create --draft`
+    specifically: it consumes a *draft*, so this only ever looks at
+    <id>-draft.yaml files under ./acsdd/profiles, ignoring any already-
+    finalized profile that might also be sitting there."""
+    profiles_dir = Path.cwd() / "acsdd" / "profiles"
+    if not profiles_dir.is_dir():
+        return None
+
+    drafts = sorted(profiles_dir.glob("*-draft.yaml"))
+    if len(drafts) == 1:
+        return drafts[0]
+    return None
+
+
 @click.group()
 @click.version_option(version=__version__)
 def cli():
@@ -438,18 +453,30 @@ def profile_discover(repo_path, profile_id, depth, known_stack, target_version, 
 
 
 @profile.command("create")
-@click.option("--draft", "draft_path", type=click.Path(exists=True, path_type=Path), required=True,
-              help="Path to a reviewed draft profile YAML produced by `acsdd profile discover`.")
+@click.option("--draft", "draft_path", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Path to a reviewed draft profile YAML (default: auto-detected single "
+                   "*-draft.yaml under ./acsdd/profiles).")
 @click.option("--output", type=click.Path(path_type=Path), default=None,
               help="Output path (default: alongside --draft, named <profile-id>.yaml).")
 @click.option("--force", is_flag=True, default=False, help="Overwrite an existing output file.")
-def profile_create(draft_path: Path, output: Optional[Path], force: bool):
+def profile_create(draft_path: Optional[Path], output: Optional[Path], force: bool):
     """Finalize a reviewed draft profile into an active one.
 
     Refuses to finalize while any [REVIEW REQUIRED] placeholder remains
     unresolved — that's the actual gate this command exists to provide,
     since `profile validate` only checks schema shape.
     """
+    if draft_path is None:
+        draft_path = _default_draft_profile_path()
+        if draft_path is None:
+            click.secho(
+                "ERROR: no --draft given and couldn't auto-detect one under ./acsdd/profiles.",
+                fg="red",
+            )
+            click.echo("Run `acsdd profile discover .` first, or pass --draft explicitly.")
+            sys.exit(1)
+        click.echo(f"No --draft given, using: {draft_path}")
+
     result = validate_profile_file(draft_path)
     if not result.ok:
         click.secho(f"FAIL  {draft_path} does not pass schema validation:", fg="red")
@@ -488,9 +515,24 @@ def profile_create(draft_path: Path, output: Optional[Path], force: bool):
 
 
 @profile.command("validate")
-@click.argument("profile_path", type=click.Path(exists=True, path_type=Path))
-def profile_validate(profile_path: Path):
-    """Validate a Profile YAML file against the Appendix B schema."""
+@click.argument("profile_path", type=click.Path(exists=True, path_type=Path), required=False, default=None)
+def profile_validate(profile_path: Optional[Path]):
+    """Validate a Profile YAML file against the Appendix B schema.
+
+    PROFILE_PATH is optional — omit it and acsdd auto-detects a single
+    profile under ./acsdd/profiles, same as `capability generate`.
+    """
+    if profile_path is None:
+        profile_path = _default_profile_path()
+        if profile_path is None:
+            click.secho(
+                "ERROR: no PROFILE_PATH given and couldn't auto-detect one under ./acsdd/profiles.",
+                fg="red",
+            )
+            click.echo("Run `acsdd profile discover .` first, or pass PROFILE_PATH explicitly.")
+            sys.exit(1)
+        click.echo(f"No PROFILE_PATH given, using: {profile_path}")
+
     result = validate_profile_file(profile_path)
     if result.ok:
         click.secho(f"PASS  {profile_path}", fg="green")

@@ -83,19 +83,24 @@ before moving on.
 **3. Validate the profile against the schema:**
 
 ```bash
-acsdd profile validate ./acsdd/profiles/my-project-draft.yaml
+acsdd profile validate
 ```
 
-This only checks structural shape — it passes just as happily on a draft
-still full of `[REVIEW REQUIRED]` placeholders as it does on a fully-reviewed
-one. It won't tell you whether you're actually done reviewing; that's what
-the next step is for.
+PROFILE_PATH is optional too — same auto-detection under `./acsdd/profiles`
+as `capability generate`. This only checks structural shape — it passes
+just as happily on a draft still full of `[REVIEW REQUIRED]` placeholders as
+it does on a fully-reviewed one. It won't tell you whether you're actually
+done reviewing; that's what the next step is for.
 
 **4. Finalize the profile once you've resolved every placeholder:**
 
 ```bash
-acsdd profile create --draft ./acsdd/profiles/my-project-draft.yaml
+acsdd profile create
 ```
+
+`--draft` is also optional, auto-detected the same way (specifically
+looking for a `*-draft.yaml`, since finalizing already-finalized output
+wouldn't make sense).
 
 This is the actual completeness gate: it refuses to run (listing exactly
 which fields) if any `[REVIEW REQUIRED]` placeholder remains anywhere in the
@@ -179,8 +184,10 @@ catalog fails the build instead of silently drifting from reality.
 ```bash
 acsdd profile discover /path/to/repo                        # --profile-id defaults to the dir name
 acsdd profile discover /path/to/repo --profile-id my-project # or set it explicitly
-acsdd profile validate acsdd/profiles/my-project-draft.yaml
-acsdd profile create --draft acsdd/profiles/my-project-draft.yaml
+acsdd profile validate                                       # PROFILE_PATH defaults to ./acsdd/profiles
+acsdd profile validate acsdd/profiles/my-project-draft.yaml  # or set it explicitly
+acsdd profile create                                         # --draft defaults to ./acsdd/profiles
+acsdd profile create --draft acsdd/profiles/my-project-draft.yaml  # or set it explicitly
 ```
 
 `discover` runs PROFILE-001 style repository discovery — detects the

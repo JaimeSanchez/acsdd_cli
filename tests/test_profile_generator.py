@@ -147,6 +147,60 @@ def test_profile_create_refuses_overwrite_without_force(tmp_path):
     assert forced.exit_code == 0, forced.output
 
 
+def test_profile_create_auto_detects_single_draft(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir.mkdir(parents=True)
+    (profiles_dir / "test-profile-draft.yaml").write_text(VALID_CLEAN_DRAFT_YAML)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profile", "create"])
+    assert result.exit_code == 0, result.output
+    assert "No --draft given, using:" in result.output
+    assert (profiles_dir / "test-profile.yaml").exists()
+
+
+def test_profile_create_errors_when_no_draft_found(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profile", "create"])
+    assert result.exit_code != 0
+    assert "profile discover" in result.output
+
+
+def test_profile_create_ignores_finalized_profile_when_auto_detecting_draft(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir.mkdir(parents=True)
+    (profiles_dir / "test-profile-draft.yaml").write_text(VALID_CLEAN_DRAFT_YAML)
+    (profiles_dir / "test-profile.yaml").write_text(VALID_CLEAN_DRAFT_YAML.replace('"draft"', '"active"'))
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profile", "create", "--force"])
+    assert result.exit_code == 0, result.output
+    assert str(profiles_dir / "test-profile-draft.yaml") in result.output
+
+
+def test_profile_validate_auto_detects_profile(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir.mkdir(parents=True)
+    (profiles_dir / "test-profile-draft.yaml").write_text(VALID_DRAFT_YAML)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profile", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "No PROFILE_PATH given, using:" in result.output
+
+
+def test_profile_validate_errors_when_no_profile_found(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profile", "validate"])
+    assert result.exit_code != 0
+    assert "profile discover" in result.output
+
+
 def test_profile_create_refuses_invalid_schema(tmp_path):
     draft_path = tmp_path / "bad-draft.yaml"
     draft_path.write_text("profile:\n  meta:\n    id: bad\n")
