@@ -14,6 +14,7 @@ import json
 import textwrap
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from acsdd.cli import cli
@@ -21,6 +22,7 @@ from acsdd.profile._discovery_impl import (
     ArchitectureDetector,
     ConventionDetector,
     DatabaseDetector,
+    HealthMetrics,
     StackDetector,
     _is_excluded_dir,
 )
@@ -167,3 +169,51 @@ def test_profile_discover_depth_surface_skips_architecture_and_health(tmp_path):
 
     report = (output_dir / "surface-test-discovery-report.md").read_text()
     assert "[REVIEW REQUIRED — run --depth deep]" in report
+
+    # The surface-mode placeholder in tech_debt_score must still pass schema
+    # validation — it's not one of the low/medium/high enum members, so this
+    # is a regression test for the schema's placeholder-acceptance pattern.
+    validate = runner.invoke(cli, [
+        "profile", "validate", str(output_dir / "surface-test-draft.yaml"),
+    ])
+    assert validate.exit_code == 0, validate.output
+
+
+def test_profile_validate_strict_flags_unresolved_placeholders(tmp_path):
+    _build_symfony_ddd_fixture(tmp_path)
+    output_dir = tmp_path / "profiles"
+    runner = CliRunner()
+
+    result = runner.invoke(cli, [
+        "profile", "discover", str(tmp_path),
+        "--profile-id", "strict-test", "--output", str(output_dir),
+    ])
+    assert result.exit_code == 0, result.output
+    draft_path = output_dir / "strict-test-draft.yaml"
+
+    lax = runner.invoke(cli, ["profile", "validate", str(draft_path)])
+    assert lax.exit_code == 0, lax.output
+
+    strict = runner.invoke(cli, ["profile", "validate", str(draft_path), "--strict"])
+    assert strict.exit_code != 0
+    assert "unresolved [REVIEW REQUIRED]" in strict.output
+    assert "engineering_standards.code_style" in strict.output
+
+
+def test_health_metrics_parses_cobertura_coverage_xml(tmp_path):
+    (tmp_path / "coverage.xml").write_text(
+        '<?xml version="1.0"?><coverage line-rate="0.876"></coverage>'
+    )
+    metrics = HealthMetrics(tmp_path).analyze()
+    assert metrics["coverage"] == pytest.approx(87.6)
+
+
+def test_health_metrics_parses_clover_xml(tmp_path):
+    (tmp_path / "clover.xml").write_text(
+        '<?xml version="1.0"?>'
+        '<coverage><project>'
+        '<metrics statements="200" coveredstatements="150"/>'
+        '</project></coverage>'
+    )
+    metrics = HealthMetrics(tmp_path).analyze()
+    assert metrics["coverage"] == pytest.approx(75.0)

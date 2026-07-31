@@ -47,3 +47,42 @@ def test_profile_bad_yaml_fails(tmp_path):
     p.write_text("profile: [unterminated")
     result = validate_profile_file(p)
     assert not result.ok
+
+
+def test_tech_debt_score_accepts_review_required_placeholder(tmp_path):
+    p = tmp_path / "profile.yaml"
+    p.write_text(VALID_PROFILE + (
+        '  repository_health:\n'
+        '    tech_debt_score: "[REVIEW REQUIRED — run --depth deep]"\n'
+    ))
+    result = validate_profile_file(p)
+    assert result.ok, result.errors
+
+
+def test_tech_debt_score_rejects_critical(tmp_path):
+    p = tmp_path / "profile.yaml"
+    p.write_text(VALID_PROFILE + (
+        '  repository_health:\n'
+        '    tech_debt_score: "critical"\n'
+    ))
+    result = validate_profile_file(p)
+    assert not result.ok
+
+
+def test_meta_status_rejects_invalid_value(tmp_path):
+    p = tmp_path / "profile.yaml"
+    p.write_text(VALID_PROFILE.replace(
+        '    version: "0.1.0"', '    version: "0.1.0"\n    status: "in-progress"'
+    ))
+    result = validate_profile_file(p)
+    assert not result.ok
+
+
+def test_meta_status_accepts_draft_and_active(tmp_path):
+    for status in ("draft", "active"):
+        p = tmp_path / "profile.yaml"
+        p.write_text(VALID_PROFILE.replace(
+            '    version: "0.1.0"', f'    version: "0.1.0"\n    status: "{status}"'
+        ))
+        result = validate_profile_file(p)
+        assert result.ok, result.errors
