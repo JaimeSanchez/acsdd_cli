@@ -10,6 +10,7 @@ Top-level commands:
 """
 
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -70,10 +71,74 @@ def _default_draft_profile_path() -> Optional[Path]:
     return None
 
 
-@click.group()
+@dataclass
+class OnboardingStatus:
+    """Snapshot of how far a repo has gotten through the Quickstart
+    sequence, derived entirely from on-disk artifacts — no state is ever
+    persisted, so this is recomputed fresh on every bare `acsdd` run."""
+
+    has_profile_draft: bool
+    has_finalized_profile: bool
+    has_manifests: bool
+    has_catalog: bool
+
+    @property
+    def is_onboarded(self) -> bool:
+        # Catalog build is ongoing maintenance, not a one-time gate, so
+        # it's tracked/shown but doesn't factor into "onboarded" status.
+        return self.has_finalized_profile and self.has_manifests
+
+
+def _onboarding_status() -> OnboardingStatus:
+    profiles_dir = Path.cwd() / "acsdd" / "profiles"
+    profile_candidates = sorted(profiles_dir.glob("*.yaml")) if profiles_dir.is_dir() else []
+    has_finalized_profile = any(not p.name.endswith("-draft.yaml") for p in profile_candidates)
+
+    capabilities_dir = _default_capabilities_dir()
+    manifests_dir = capabilities_dir / "_manifests"
+    has_manifests = manifests_dir.is_dir() and any(manifests_dir.glob("*.yaml"))
+    has_catalog = (capabilities_dir / "CATALOG.md").exists()
+
+    return OnboardingStatus(
+        has_profile_draft=bool(profile_candidates),
+        has_finalized_profile=has_finalized_profile,
+        has_manifests=has_manifests,
+        has_catalog=has_catalog,
+    )
+
+
+def _print_welcome(status: OnboardingStatus):
+    def _step(done: bool, text: str):
+        mark = "[x]" if done else "[ ]"
+        click.secho(f"  {mark} {text}", fg="green" if done else "yellow")
+
+    click.echo("=" * 70)
+    click.echo(" Welcome to ACSDD — AI-Collaborative Software Development & Delivery")
+    click.echo("=" * 70)
+    click.echo()
+    click.echo("This repo isn't fully onboarded yet. Recommended steps:")
+    click.echo()
+    _step(status.has_profile_draft, "1. acsdd profile discover .      — scan the repo, write a draft profile")
+    click.echo("      -  acsdd profile validate       — check the draft against the schema")
+    _step(status.has_finalized_profile, "2. acsdd profile create           — finalize once REVIEW REQUIRED fields are resolved")
+    _step(status.has_manifests, "3. acsdd capability generate --id ID --category CAT  — scaffold a capability manifest")
+    _step(status.has_catalog, "4. acsdd capability validate && acsdd catalog build")
+    click.echo()
+    click.echo("See README.md#quickstart for details, or `acsdd COMMAND --help`.")
+
+
+@click.group(invoke_without_command=True)
 @click.version_option(version=__version__)
-def cli():
+@click.pass_context
+def cli(ctx: click.Context):
     """ACSDD — AI-Collaborative Software Development & Delivery CLI."""
+    if ctx.invoked_subcommand is not None:
+        return
+    status = _onboarding_status()
+    if status.is_onboarded:
+        click.echo(ctx.get_help())
+    else:
+        _print_welcome(status)
 
 
 @cli.command("update")

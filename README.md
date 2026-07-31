@@ -58,7 +58,9 @@ Requires Python 3.10+. Installs the `acsdd` command on your PATH.
 This is the full path from "just installed" to a working ACSDD setup in your
 own repository. Run every command below **from the root of your repo**
 (that's what lets acsdd auto-detect paths instead of you passing them by
-hand).
+hand). Running bare `acsdd` (no subcommand) in a repo that hasn't finished
+this sequence shows the same steps as an in-terminal checklist, so you don't
+need to come back here to know what's next.
 
 **1. Install** — see [Install](#install) above.
 
