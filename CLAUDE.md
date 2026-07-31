@@ -174,6 +174,29 @@ source path, but only building the binary
 (`pyinstaller packaging/acsdd.spec ...`) and running it with `src/` off
 `PYTHONPATH` proves the frozen path still works.
 
+## Versioning
+
+The version is duplicated in two places that must always match:
+`project.version` in `pyproject.toml` and `__version__` in
+`src/acsdd/__init__.py` (which `cli.py` surfaces via `--version` and
+`acsdd update`'s "Current version:" line). Follow semver: patch for bug
+fixes, minor for backwards-compatible features, major for breaking changes
+to the CLI or manifest/profile schemas.
+
+Bump the version in its own commit, *after* the fix/feature commit(s) it
+covers have landed on `main` — not bundled into the same commit as the
+change. Commit message: `Bump version to X.Y.Z`, with a body summarizing
+what's in the release (see `f9c8b98`, `0894833`, `f42aa7e` for examples).
+This keeps the change itself reviewable independent of the version number,
+and keeps "what shipped in X.Y.Z" answerable straight from `git log`
+without a separate changelog file (there isn't one).
+
+A release only actually publishes binaries when the bump commit is tagged
+`vX.Y.Z` and the tag is pushed — `.github/workflows/release.yml` triggers
+on that tag pattern. An unbumped or untagged fix on `main` is invisible to
+`acsdd update` and to `curl .../install.sh`, both of which only ever see
+the latest GitHub release.
+
 ## Testing conventions
 
 Tests live in `tests/`, generally one file per package (`test_capability.py`,
