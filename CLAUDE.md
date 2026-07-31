@@ -191,6 +191,14 @@ This keeps the change itself reviewable independent of the version number,
 and keeps "what shipped in X.Y.Z" answerable straight from `git log`
 without a separate changelog file (there isn't one).
 
+The mechanical part of this — editing both files in lockstep, committing,
+tagging — is automated by `.github/workflows/bump-version.yml`
+(`workflow_dispatch`, run from the Actions tab or `gh workflow run
+bump-version.yml -f version=X.Y.Z -f summary="..."`). It still requires a
+human to supply the version number and release summary; it does not infer
+either. It pushes straight to `main`, so only run it once the commit(s)
+being released are already there.
+
 A release only actually publishes binaries when the bump commit is tagged
 `vX.Y.Z` and the tag is pushed — `.github/workflows/release.yml` triggers
 on that tag pattern. An unbumped or untagged fix on `main` is invisible to
