@@ -17,6 +17,7 @@ import sys
 import json
 import yaml
 import argparse
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from datetime import datetime
 from collections import Counter
@@ -691,6 +692,24 @@ class HealthMetrics:
                         matches = re.findall(r'(\d+(?:\.\d+)?)%', line)
                         if matches:
                             return float(matches[0])
+                return None
+            if path.name == "coverage.xml":
+                # Cobertura: <coverage line-rate="0.87" ...>
+                root = ET.parse(path).getroot()
+                line_rate = root.get("line-rate")
+                if line_rate is not None:
+                    return float(line_rate) * 100
+                return None
+            if path.name == "clover.xml":
+                # Clover: <project><metrics statements="N" coveredstatements="M" .../></project>
+                root = ET.parse(path).getroot()
+                metrics = root.find(".//project/metrics")
+                if metrics is not None:
+                    statements = int(metrics.get("statements", 0))
+                    covered = int(metrics.get("coveredstatements", 0))
+                    if statements > 0:
+                        return covered / statements * 100
+                return None
             return None
         except Exception:
             return None

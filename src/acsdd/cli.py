@@ -516,7 +516,10 @@ def profile_create(draft_path: Optional[Path], output: Optional[Path], force: bo
 
 @profile.command("validate")
 @click.argument("profile_path", type=click.Path(exists=True, path_type=Path), required=False, default=None)
-def profile_validate(profile_path: Optional[Path]):
+@click.option("--strict", is_flag=True, default=False,
+              help="Also fail if any [REVIEW REQUIRED] placeholder remains unresolved "
+                   "(schema validation alone can't tell a finished profile from a draft).")
+def profile_validate(profile_path: Optional[Path], strict: bool):
     """Validate a Profile YAML file against the Appendix B schema.
 
     PROFILE_PATH is optional — omit it and acsdd auto-detects a single
@@ -534,13 +537,27 @@ def profile_validate(profile_path: Optional[Path]):
         click.echo(f"No PROFILE_PATH given, using: {profile_path}")
 
     result = validate_profile_file(profile_path)
-    if result.ok:
-        click.secho(f"PASS  {profile_path}", fg="green")
-        return
-    click.secho(f"FAIL  {profile_path}", fg="red")
-    for err in result.errors:
-        click.echo(f"  - {err}")
-    sys.exit(1)
+    if not result.ok:
+        click.secho(f"FAIL  {profile_path}", fg="red")
+        for err in result.errors:
+            click.echo(f"  - {err}")
+        sys.exit(1)
+
+    if strict:
+        import yaml as _yaml
+        data = _yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
+        profile = data.get("profile", {}) or {}
+        unresolved = find_unresolved_fields(profile)
+        if unresolved:
+            click.secho(
+                f"FAIL  {profile_path} has {len(unresolved)} unresolved [REVIEW REQUIRED] field(s):",
+                fg="red",
+            )
+            for path in unresolved:
+                click.echo(f"  - {path}")
+            sys.exit(1)
+
+    click.secho(f"PASS  {profile_path}", fg="green")
 
 
 if __name__ == "__main__":
