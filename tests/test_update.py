@@ -112,6 +112,46 @@ def test_perform_update_aborts_on_checksum_mismatch(monkeypatch, tmp_path):
     assert fake_exe.read_bytes() == b"OLD BINARY"
 
 
+def test_perform_update_wraps_download_timeout(monkeypatch, tmp_path):
+    fake_exe = tmp_path / "acsdd"
+    fake_exe.write_bytes(b"OLD BINARY")
+
+    monkeypatch.setattr(update_mod.sys, "executable", str(fake_exe))
+    monkeypatch.setattr(update_mod, "is_frozen_binary", lambda: True)
+    monkeypatch.setattr(update_mod, "detect_platform", lambda: ("linux", "x86_64"))
+
+    def fake_download(url, dest):
+        raise TimeoutError("The read operation timed out")
+
+    monkeypatch.setattr(update_mod, "_download", fake_download)
+
+    with pytest.raises(update_mod.UpdateError, match="timed out"):
+        update_mod.perform_update(repo="someone/acsdd_cli", version="v9.9.9")
+
+    # original binary untouched on failure
+    assert fake_exe.read_bytes() == b"OLD BINARY"
+
+
+def test_perform_update_wraps_latest_release_tag_url_error(monkeypatch, tmp_path):
+    fake_exe = tmp_path / "acsdd"
+    fake_exe.write_bytes(b"OLD BINARY")
+
+    monkeypatch.setattr(update_mod.sys, "executable", str(fake_exe))
+    monkeypatch.setattr(update_mod, "is_frozen_binary", lambda: True)
+    monkeypatch.setattr(update_mod, "detect_platform", lambda: ("linux", "x86_64"))
+
+    def fake_latest_release_tag(repo):
+        raise update_mod.urllib.error.URLError("name resolution failed")
+
+    monkeypatch.setattr(update_mod, "latest_release_tag", fake_latest_release_tag)
+
+    with pytest.raises(update_mod.UpdateError, match="failed to check latest release"):
+        update_mod.perform_update(repo="someone/acsdd_cli")
+
+    # original binary untouched on failure
+    assert fake_exe.read_bytes() == b"OLD BINARY"
+
+
 def test_update_command_reports_error_when_not_frozen():
     runner = CliRunner()
     result = runner.invoke(cli, ["update"])

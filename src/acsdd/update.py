@@ -80,7 +80,10 @@ def perform_update(repo: str = DEFAULT_REPO, version: Optional[str] = None) -> s
 
     os_name, arch = detect_platform()
     asset = f"acsdd-{os_name}-{arch}"
-    tag = version or latest_release_tag(repo)
+    try:
+        tag = version or latest_release_tag(repo)
+    except (urllib.error.URLError, OSError) as e:
+        raise UpdateError(f"failed to check latest release: {e}") from e
     base_url = f"https://github.com/{repo}/releases/download/{tag}"
 
     current_exe = Path(sys.executable).resolve()
@@ -91,7 +94,7 @@ def perform_update(repo: str = DEFAULT_REPO, version: Optional[str] = None) -> s
         try:
             _download(f"{base_url}/{asset}", tmp_binary)
             _download(f"{base_url}/{asset}.sha256", tmp_checksum)
-        except urllib.error.HTTPError as e:
+        except (urllib.error.URLError, OSError) as e:
             raise UpdateError(f"failed to download {asset} for {tag}: {e}") from e
 
         if not verify_checksum(tmp_binary, tmp_checksum):
