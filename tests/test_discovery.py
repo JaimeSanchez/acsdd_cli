@@ -15,6 +15,7 @@ import textwrap
 from pathlib import Path
 
 import pytest
+import yaml
 from click.testing import CliRunner
 
 from acsdd.cli import cli
@@ -24,6 +25,7 @@ from acsdd.profile._discovery_impl import (
     DatabaseDetector,
     HealthMetrics,
     StackDetector,
+    SymfonyStructureDetector,
     _is_excluded_dir,
 )
 
@@ -44,7 +46,21 @@ def _build_symfony_ddd_fixture(root: Path) -> None:
             "doctrine/doctrine-bundle": "^2.13",
         }
     }))
-    (root / "symfony.lock").write_text("{}")
+    (root / "composer.lock").write_text(json.dumps({
+        "packages": [
+            {"name": "symfony/framework-bundle", "version": "v6.1.11"},
+            {"name": "doctrine/orm", "version": "3.6.2"},
+            {"name": "doctrine/doctrine-bundle", "version": "2.13.1"},
+            {"name": "doctrine/dbal", "version": "3.7.2"},
+        ],
+        "packages-dev": [
+            {"name": "doctrine/doctrine-migrations-bundle", "version": "v3.3.1"},
+        ],
+    }))
+    (root / "symfony.lock").write_text(json.dumps({
+        "symfony/framework-bundle": {"version": "6.1", "recipe": {"repo": "github.com/symfony/recipes"}},
+        "doctrine/doctrine-bundle": {"version": "2.11", "recipe": {"repo": "github.com/symfony/recipes"}},
+    }))
     (root / "phpstan.dist.neon").write_text("parameters:\n    level: 8\n")
 
     src = root / "src"
@@ -75,6 +91,57 @@ def test_stack_detection_php_symfony(tmp_path):
     stack, _, confidence = by_role["backend"]
     assert stack == "php-symfony"
     assert confidence > 0
+
+
+def test_symfony_structure_detector_prefers_composer_lock_resolved_version(tmp_path):
+    _build_symfony_ddd_fixture(tmp_path)
+    info = SymfonyStructureDetector(tmp_path).detect()
+    # composer.json only declares "6.1.*"; composer.lock resolved v6.1.11 —
+    # the exact resolved version should win over the constraint-regexed one.
+    assert info["version"] == "6.1.11"
+    assert info["version_constraint"] == "6.1.*"
+
+
+def test_symfony_structure_detector_populates_additional_packages_from_lock(tmp_path):
+    _build_symfony_ddd_fixture(tmp_path)
+    info = SymfonyStructureDetector(tmp_path).detect()
+    additional = {pkg["name"]: pkg["version"] for pkg in info["additional_packages"]}
+    assert additional == {
+        "doctrine/orm": "3.6.2",
+        "doctrine/dbal": "3.7.2",
+        "doctrine/doctrine-bundle": "2.13.1",
+        "doctrine/doctrine-migrations-bundle": "3.3.1",
+    }
+
+
+def test_symfony_structure_detector_flex_from_symfony_lock_alone(tmp_path):
+    # No config/packages, config/bundles.php, or public/index.php — only
+    # symfony.lock, which Flex always writes and should be enough on its own.
+    (tmp_path / "composer.json").write_text(json.dumps({
+        "require": {"symfony/framework-bundle": "6.1.*"}
+    }))
+    (tmp_path / "symfony.lock").write_text("{}")
+    info = SymfonyStructureDetector(tmp_path).detect()
+    assert info["structure"] == "flex"
+
+
+def test_symfony_structure_detector_falls_back_without_composer_lock(tmp_path):
+    (tmp_path / "composer.json").write_text(json.dumps({
+        "require": {"symfony/framework-bundle": "^6.0"}
+    }))
+    info = SymfonyStructureDetector(tmp_path).detect()
+    assert info["version"] == "6.0"
+    assert info["additional_packages"] == []
+
+
+def test_symfony_structure_detector_ignores_malformed_composer_lock(tmp_path):
+    (tmp_path / "composer.json").write_text(json.dumps({
+        "require": {"symfony/framework-bundle": "^6.0"}
+    }))
+    (tmp_path / "composer.lock").write_text("not valid json")
+    info = SymfonyStructureDetector(tmp_path).detect()
+    assert info["version"] == "6.0"
+    assert info["additional_packages"] == []
 
 
 def test_architecture_detector_reports_tie_not_silent_winner(tmp_path):
@@ -153,6 +220,25 @@ def test_profile_discover_defaults_profile_id_to_repo_dir_name(tmp_path):
     assert result.exit_code == 0, result.output
     assert "using directory name: my-cool-project" in result.output
     assert (output_dir / "my-cool-project-draft.yaml").exists()
+
+
+def test_profile_discover_surfaces_doctrine_additional_packages(tmp_path):
+    _build_symfony_ddd_fixture(tmp_path)
+    output_dir = tmp_path / "profiles"
+    runner = CliRunner()
+
+    result = runner.invoke(cli, [
+        "profile", "discover", str(tmp_path),
+        "--profile-id", "additional-test", "--output", str(output_dir),
+    ])
+    assert result.exit_code == 0, result.output
+
+    draft = yaml.safe_load((output_dir / "additional-test-draft.yaml").read_text())
+    tech_stack = draft["profile"]["technology_stack"]
+    assert tech_stack["version"] == "6.1.11 (symfony/framework-bundle: 6.1.*)"
+    additional = {pkg["name"]: pkg["version"] for pkg in tech_stack["additional"]}
+    assert additional["doctrine/orm"] == "3.6.2"
+    assert additional["doctrine/dbal"] == "3.7.2"
 
 
 def test_profile_discover_depth_surface_skips_architecture_and_health(tmp_path):

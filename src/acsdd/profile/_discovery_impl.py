@@ -272,6 +272,17 @@ class SymfonyStructureDetector:
     https://symfony.com/doc/current/best_practices.html
     """
 
+    # Doctrine-family packages whose exact resolved version is useful enough
+    # to surface in technology_stack.additional (schema field otherwise never
+    # populated) — deliberately not every symfony.lock entry, which would be
+    # mostly noise (minor symfony/* micro-components).
+    _ADDITIONAL_PACKAGES = [
+        "doctrine/orm",
+        "doctrine/dbal",
+        "doctrine/doctrine-bundle",
+        "doctrine/doctrine-migrations-bundle",
+    ]
+
     def __init__(self, repo_path: Path):
         self.repo_path = repo_path
 
@@ -284,6 +295,7 @@ class SymfonyStructureDetector:
             "orm": None,
             "public_dir": None,
             "uses_dotenv": False,
+            "additional_packages": [],
         }
 
         composer_path = self.repo_path / "composer.json"
@@ -300,13 +312,32 @@ class SymfonyStructureDetector:
             except Exception:
                 pass
 
+        # composer.lock records what Composer actually resolved, not just the
+        # declared range in composer.json — e.g. a "^6.0" constraint could
+        # resolve anywhere from 6.0 to 6.4.x. Prefer the exact resolved
+        # version when available; fall back to the constraint-derived value
+        # above if the lock file is missing, unparseable, or doesn't list the
+        # package (shouldn't happen for a valid lock, but degrade quietly).
+        resolved = self._read_composer_lock()
+        resolved_symfony = resolved.get("symfony/framework-bundle") or resolved.get("symfony/symfony")
+        if resolved_symfony:
+            result["version"] = resolved_symfony
+        result["additional_packages"] = [
+            {"name": pkg, "version": resolved[pkg]}
+            for pkg in self._ADDITIONAL_PACKAGES
+            if pkg in resolved
+        ]
+
         # Flex (Symfony 3.4+/4.x+) markers vs. legacy pre-Flex markers.
         # See https://symfony.com/doc/current/configuration.html (config/packages,
-        # config/bundles.php) vs the Symfony 2.x/3.x app/ layout.
+        # config/bundles.php) vs the Symfony 2.x/3.x app/ layout. symfony.lock is
+        # the most authoritative signal — Flex always writes it — so it's included
+        # alongside the directory-structure markers rather than replacing them.
         flex_markers = [
             self.repo_path / "config" / "packages",
             self.repo_path / "config" / "bundles.php",
             self.repo_path / "public" / "index.php",
+            self.repo_path / "symfony.lock",
         ]
         legacy_markers = [
             self.repo_path / "app" / "AppKernel.php",
@@ -346,6 +377,27 @@ class SymfonyStructureDetector:
         if match:
             return f"{match.group(1)}.{match.group(2)}"
         return None
+
+    def _read_composer_lock(self) -> Dict[str, str]:
+        """package name -> resolved version (leading 'v' stripped), read
+        from both packages and packages-dev. Empty dict if composer.lock is
+        missing or unparseable — callers must fall back to composer.json's
+        declared constraints in that case."""
+        lock_path = self.repo_path / "composer.lock"
+        if not lock_path.exists():
+            return {}
+        try:
+            lock = json.loads(lock_path.read_text())
+            versions = {}
+            for section in ("packages", "packages-dev"):
+                for pkg in lock.get(section, []):
+                    name = pkg.get("name")
+                    version = pkg.get("version")
+                    if name and version:
+                        versions[name] = version.lstrip("v")
+            return versions
+        except Exception:
+            return {}
 
 
 class DatabaseDetector:
@@ -839,6 +891,8 @@ class ProfileGenerator:
                     "orm": orm_value,
                     "database": self.database or "[REVIEW REQUIRED — detect database engine]",
                     **({"frontend": frontend_value} if frontend_value is not None else {}),
+                    **({"additional": self.symfony_info["additional_packages"]}
+                       if self.symfony_info.get("additional_packages") else {}),
                 },
                 "engineering_standards": {
                     "code_style": formatter or linter or "[REVIEW REQUIRED]",
