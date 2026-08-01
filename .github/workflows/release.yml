@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*.*.*"
+  # Manual fallback: a tag pushed by bump-version.yml's default GITHUB_TOKEN
+  # doesn't always trigger this workflow's own `push: tags` event (GitHub
+  # Actions suppresses new workflow runs triggered by the auto-provided
+  # token, to avoid recursive-trigger loops). When that happens, dispatch
+  # this workflow with --ref <the vX.Y.Z tag> to build and publish it.
+  workflow_dispatch:
 
 jobs:
   build:
