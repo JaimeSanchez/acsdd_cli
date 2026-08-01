@@ -107,14 +107,23 @@ def _onboarding_status() -> OnboardingStatus:
     )
 
 
+_BANNER = r"""
+ █████╗  ██████╗███████╗██████╗ ██████╗
+██╔══██╗██╔════╝██╔════╝██╔══██╗██╔══██╗
+███████║██║     ███████╗██║  ██║██║  ██║
+██╔══██║██║     ╚════██║██║  ██║██║  ██║
+██║  ██║╚██████╗███████║██████╔╝██████╔╝
+╚═╝  ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+"""
+
+
 def _print_welcome(status: OnboardingStatus):
     def _step(done: bool, text: str):
         mark = "[x]" if done else "[ ]"
         click.secho(f"  {mark} {text}", fg="green" if done else "yellow")
 
-    click.echo("=" * 70)
-    click.echo(" Welcome to ACSDD — AI-Collaborative Software Development & Delivery")
-    click.echo("=" * 70)
+    click.secho(_BANNER, fg="cyan", bold=True)
+    click.secho("  AI-Collaborative Software Development & Delivery", dim=True)
     click.echo()
     click.echo("This repo isn't fully onboarded yet. Recommended steps:")
     click.echo()

@@ -38,7 +38,7 @@ def test_bare_invocation_shows_welcome_when_not_onboarded(monkeypatch, tmp_path)
     result = runner.invoke(cli, [])
 
     assert result.exit_code == 0, result.output
-    assert "Welcome to ACSDD" in result.output
+    assert "AI-Collaborative Software Development & Delivery" in result.output
     assert "acsdd profile discover ." in result.output
     assert "[ ] 1." in result.output
 
@@ -57,7 +57,7 @@ def test_bare_invocation_shows_help_when_onboarded(monkeypatch, tmp_path):
     result = runner.invoke(cli, [])
 
     assert result.exit_code == 0, result.output
-    assert "Welcome to ACSDD" not in result.output
+    assert "█████╗" not in result.output
     assert "Usage:" in result.output
 
 
@@ -71,7 +71,7 @@ def test_bare_invocation_partial_onboarding_tracks_progress(monkeypatch, tmp_pat
     result = runner.invoke(cli, [])
 
     assert result.exit_code == 0, result.output
-    assert "Welcome to ACSDD" in result.output
+    assert "AI-Collaborative Software Development & Delivery" in result.output
     assert "[x] 1." in result.output
     assert "[ ] 2." in result.output
 
@@ -82,4 +82,4 @@ def test_subcommand_output_unaffected_by_welcome_banner(monkeypatch, tmp_path):
     runner = CliRunner()
     result = runner.invoke(cli, ["capability", "list", "--manifests-dir", str(tmp_path / "_manifests")])
 
-    assert "Welcome to ACSDD" not in result.output
+    assert "█████╗" not in result.output
