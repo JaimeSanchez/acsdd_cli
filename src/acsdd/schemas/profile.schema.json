@@ -113,7 +113,7 @@
                   "name": { "type": "string" },
                   "enforcement": {
                     "type": "string",
-                    "enum": ["automatic", "manual", "automatic_and_manual"]
+                    "enum": ["automatic", "manual", "automatic_and_manual", "advisory", "not-applicable"]
                   },
                   "tool": { "type": "string" },
                   "rule": { "type": "string" }
