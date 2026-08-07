@@ -105,10 +105,10 @@ class UnresolvedField:
             "examples": list(g.examples),
             "resolution": g.resolution,
             "action": g.action,
-            "linked_fields": [lf.to_dict() for lf in self._resolved_links()],
+            "linked_fields": [lf.to_dict() for lf in self.resolved_links()],
         }
 
-    def _resolved_links(self) -> List[LinkedField]:
+    def resolved_links(self) -> List[LinkedField]:
         """Guidance is registered against the index-normalized path, so linked
         fields carry `[]` where this field's concrete path carries `[3]`.
         Re-index them so the caller gets a path it can actually write to."""

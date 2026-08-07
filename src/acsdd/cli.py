@@ -3,7 +3,7 @@
 Subcommand groups:
   acsdd capability   validate / list / show / generate
   acsdd catalog      build / verify
-  acsdd profile      discover / validate / create
+  acsdd profile      discover / validate / create / review
 
 Top-level commands:
   acsdd update       self-update the standalone binary install
@@ -71,6 +71,19 @@ def _default_draft_profile_path() -> Optional[Path]:
     return None
 
 
+def _default_review_profile_path() -> Optional[Path]:
+    """Auto-detection for `profile review`, which prefers a *draft*.
+
+    The preference is inverted relative to _default_profile_path deliberately:
+    that helper prefers a finalized profile, and a finalized profile by
+    definition has nothing left to review — in a repo holding both, it would
+    always report "nothing to do" while the draft that actually needed work sat
+    right next to it. Falls back to _default_profile_path so reviewing a
+    finalized profile still works when that's all there is.
+    """
+    return _default_draft_profile_path() or _default_profile_path()
+
+
 @dataclass
 class OnboardingStatus:
     """Snapshot of how far a repo has gotten through the Quickstart
@@ -129,6 +142,7 @@ def _print_welcome(status: OnboardingStatus):
     click.echo()
     _step(status.has_profile_draft, "1. acsdd profile discover .      — scan the repo, write a draft profile")
     click.echo("      -  acsdd profile validate       — check the draft against the schema")
+    click.echo("      -  acsdd profile review         — what's still [REVIEW REQUIRED], and how to resolve it")
     _step(status.has_finalized_profile, "2. acsdd profile create           — finalize once REVIEW REQUIRED fields are resolved")
     _step(status.has_manifests, "3. acsdd capability generate --id ID --category CAT  — scaffold a capability manifest")
     _step(status.has_catalog, "4. acsdd capability validate && acsdd catalog build")
@@ -495,7 +509,7 @@ def _extract_catalog_date(catalog_path: Path):
 
 @cli.group()
 def profile():
-    """Discover and validate ACSDD Engineering Profiles."""
+    """Discover, review, and validate ACSDD Engineering Profiles."""
 
 
 @profile.command("discover")
@@ -632,6 +646,140 @@ def profile_validate(profile_path: Optional[Path], strict: bool):
             sys.exit(1)
 
     click.secho(f"PASS  {profile_path}", fg="green")
+
+
+@profile.command("review")
+@click.argument("profile_path", type=click.Path(exists=True, path_type=Path), required=False, default=None)
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit the report as JSON on stdout (what the profile-review skill consumes).")
+@click.option("--repo-path", type=click.Path(exists=True, path_type=Path), default=Path("."),
+              help="Repo root used to check whether each suggested evidence file exists.")
+def profile_review(profile_path: Optional[Path], as_json: bool, repo_path: Path):
+    """Explain what's still [REVIEW REQUIRED] in a profile, and how to resolve it.
+
+    `profile validate --strict` tells you which fields are unresolved; this
+    tells you what each one means, what discovery already tried, which files to
+    look at, and what a plausible value looks like.
+
+    Informational, not a gate: unresolved fields are this command's expected
+    input, so it exits 0 even when it finds them. Exit 1 is reserved for real
+    failures (no profile found, unparseable YAML). Wire `acsdd profile validate
+    --strict` into CI — never this.
+    """
+    import json as _json
+    import yaml as _yaml
+
+    from acsdd.profile.review import review_profile
+
+    if profile_path is None:
+        profile_path = _default_review_profile_path()
+        if profile_path is None:
+            click.secho(
+                "ERROR: no PROFILE_PATH given and couldn't auto-detect one under ./acsdd/profiles.",
+                fg="red",
+            )
+            click.echo("Run `acsdd profile discover .` first, or pass PROFILE_PATH explicitly.")
+            sys.exit(1)
+        # Chatter goes to stderr so --json keeps stdout to the payload alone.
+        click.echo(f"No PROFILE_PATH given, using: {profile_path}", err=as_json)
+
+    try:
+        data = _yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
+    except _yaml.YAMLError as exc:
+        click.secho(f"ERROR: {profile_path} is not parseable YAML:", fg="red")
+        click.echo(f"  - {exc}")
+        sys.exit(1)
+
+    # A draft that's both structurally broken and incomplete is exactly the one
+    # that most needs hints, so schema problems are reported and stepped over
+    # rather than being a gate.
+    result = validate_profile_file(profile_path)
+    schema_errors = [] if result.ok else list(result.errors)
+
+    report = review_profile(data.get("profile", {}) or {}, repo_path=repo_path)
+
+    if as_json:
+        payload = {
+            "acsdd_version": __version__,
+            "profile_path": str(profile_path),
+            "schema_errors": schema_errors,
+            **report.to_dict(),
+        }
+        click.echo(_json.dumps(payload, indent=2, sort_keys=False))
+        return
+
+    if schema_errors:
+        click.secho(f"WARN  {profile_path} does not pass schema validation:", fg="yellow")
+        for err in schema_errors:
+            click.echo(f"  - {err}")
+        click.echo()
+
+    label = f" (profile: {report.profile_id})" if report.profile_id else ""
+    click.echo(f"Reviewing {profile_path}{label}")
+    click.echo()
+
+    if not report.unresolved:
+        click.secho(f"PASS  {profile_path} has no unresolved [REVIEW REQUIRED] fields", fg="green")
+    else:
+        click.echo(f"{len(report.unresolved)} unresolved [REVIEW REQUIRED] field(s):")
+        click.echo()
+        for entry in report.unresolved:
+            _print_unresolved_field(entry)
+
+    if report.advisories:
+        import textwrap
+        click.echo("Also worth setting (no placeholder, still at the discovery default):")
+        for advisory in report.advisories:
+            click.echo(textwrap.fill(
+                f"{advisory.path} ({advisory.current_value!r}) — {advisory.why}",
+                width=78, initial_indent="  - ", subsequent_indent=" " * 4,
+            ))
+        click.echo()
+
+    click.echo("Next:")
+    if report.unresolved:
+        click.echo(f"  1. resolve the fields above in {profile_path}")
+        click.echo(f"  2. acsdd profile validate {profile_path} --strict")
+        click.echo("  3. acsdd profile create")
+    else:
+        click.echo("  acsdd profile create")
+
+
+def _print_unresolved_field(entry) -> None:
+    """One block per unresolved field, wrapped so long hint text stays readable."""
+    import textwrap
+
+    def _wrap(label: str, text: str):
+        body = textwrap.fill(text, width=78,
+                             initial_indent=" " * 6 + f"{label:<13}",
+                             subsequent_indent=" " * 19)
+        click.echo(body)
+
+    click.secho(f"  {entry.path}", fg="yellow")
+    _wrap("placeholder:", entry.placeholder)
+    _wrap("what:", entry.guidance.what)
+    _wrap("tried:", entry.guidance.detection_attempted)
+
+    if entry.evidence:
+        rendered = [
+            hint.hint if hint.found is None
+            else f"{hint.hint} ({'found' if hint.found else 'missing'})"
+            for hint in entry.evidence
+        ]
+        _wrap("look at:", ", ".join(rendered))
+    if entry.guidance.allowed_values:
+        _wrap("allowed:", ", ".join(entry.guidance.allowed_values))
+    elif entry.guidance.examples:
+        _wrap("examples:", ", ".join(entry.guidance.examples))
+
+    for link in entry.resolved_links():
+        _wrap("also set:", f"{link.path} — {link.note}")
+
+    if entry.guidance.resolution == "rerun-discovery":
+        _wrap("resolve:", f"re-run discovery — {entry.guidance.action}")
+    else:
+        _wrap("resolve:", "edit the draft in place")
+    click.echo()
 
 
 if __name__ == "__main__":

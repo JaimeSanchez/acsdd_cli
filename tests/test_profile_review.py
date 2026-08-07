@@ -6,9 +6,13 @@ guidance table) lives in test_discovery.py, where the fixture repo already is.
 """
 
 import copy
+import json
+import textwrap
 
 import pytest
+from click.testing import CliRunner
 
+from acsdd.cli import cli
 from acsdd.profile.generator import REVIEW_PREFIX, find_unresolved_fields
 from acsdd.profile.review import (
     _MISSING,
@@ -231,3 +235,133 @@ def test_get_returns_missing_rather_than_raising():
     assert _get(DRAFT_PROFILE, _parse_path("technology_stack[0]")) is _MISSING
     assert _get(DRAFT_PROFILE, _parse_path(
         "security_profile.cross_cutting_constraints[99].tool")) is _MISSING
+
+
+# ---------------------------------------------------------------------
+# acsdd profile review
+# ---------------------------------------------------------------------
+
+DRAFT_YAML = textwrap.dedent("""
+    profile:
+      meta:
+        id: "cli-test"
+        version: "0.1.0"
+        status: "draft"
+      technology_stack:
+        language: "php"
+        framework: "symfony"
+        database: "[REVIEW REQUIRED — detect database engine]"
+      engineering_standards:
+        code_style: "[REVIEW REQUIRED]"
+        min_coverage: 0
+      ai_execution_rules:
+        max_files_per_session: 3
+""")
+
+CLEAN_YAML = DRAFT_YAML.replace(
+    '"[REVIEW REQUIRED — detect database engine]"', '"postgresql"'
+).replace('code_style: "[REVIEW REQUIRED]"', 'code_style: "php-cs-fixer"')
+
+
+def _write_draft(tmp_path, body=DRAFT_YAML, name="cli-test-draft.yaml"):
+    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir.mkdir(parents=True, exist_ok=True)
+    path = profiles_dir / name
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_review_lists_unresolved_fields_and_exits_zero(tmp_path):
+    # Deliberately NOT a gate: unresolved fields are this command's expected
+    # input, so finding them is a success. `validate --strict` is the gate.
+    draft = _write_draft(tmp_path)
+    result = CliRunner().invoke(cli, ["profile", "review", str(draft)])
+
+    assert result.exit_code == 0, result.output
+    assert "2 unresolved [REVIEW REQUIRED] field(s):" in result.output
+    assert "technology_stack.database" in result.output
+    assert "resolve:" in result.output
+    assert "Also worth setting" in result.output
+
+
+def test_review_json_is_the_only_thing_on_stdout(tmp_path, monkeypatch):
+    _write_draft(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    # No PROFILE_PATH, so the "using: ..." line fires — it must go to stderr,
+    # or the skill consuming this payload can't parse it.
+    result = CliRunner().invoke(cli, ["profile", "review", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["profile_id"] == "cli-test"
+    assert payload["unresolved_count"] == 2
+    assert payload["schema_errors"] == []
+    assert {u["path"] for u in payload["unresolved"]} == {
+        "technology_stack.database", "engineering_standards.code_style",
+    }
+    assert "No PROFILE_PATH given" in result.stderr
+
+
+def test_review_auto_detects_the_draft_over_a_finalized_profile(tmp_path, monkeypatch):
+    _write_draft(tmp_path)
+    _write_draft(tmp_path, body=CLEAN_YAML, name="cli-test.yaml")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(cli, ["profile", "review"])
+    assert result.exit_code == 0, result.output
+    assert "cli-test-draft.yaml" in result.output
+    assert "2 unresolved" in result.output
+
+
+def test_review_reports_pass_on_a_resolved_profile(tmp_path):
+    path = _write_draft(tmp_path, body=CLEAN_YAML, name="cli-test.yaml")
+    result = CliRunner().invoke(cli, ["profile", "review", str(path)])
+
+    assert result.exit_code == 0, result.output
+    assert "no unresolved [REVIEW REQUIRED] fields" in result.output
+    assert "acsdd profile create" in result.output
+
+
+def test_review_warns_but_continues_on_a_schema_invalid_draft(tmp_path):
+    # A draft that's both broken and incomplete is exactly the one that most
+    # needs hints, so schema failures warn rather than gate.
+    broken = DRAFT_YAML.replace('version: "0.1.0"', 'version: "not-a-version"')
+    draft = _write_draft(tmp_path, body=broken)
+
+    result = CliRunner().invoke(cli, ["profile", "review", str(draft)])
+    assert result.exit_code == 0, result.output
+    assert "WARN" in result.output
+    assert "technology_stack.database" in result.output
+
+
+def test_review_json_carries_schema_errors_instead_of_warning(tmp_path):
+    broken = DRAFT_YAML.replace('version: "0.1.0"', 'version: "not-a-version"')
+    draft = _write_draft(tmp_path, body=broken)
+
+    result = CliRunner().invoke(cli, ["profile", "review", str(draft), "--json"])
+    payload = json.loads(result.stdout)
+    assert payload["schema_errors"]
+    assert payload["unresolved_count"] == 2
+
+
+def test_review_errors_when_no_profile_can_be_found(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(cli, ["profile", "review"])
+
+    assert result.exit_code == 1
+    assert "ERROR: no PROFILE_PATH given" in result.output
+
+
+def test_review_annotates_evidence_against_repo_path(tmp_path):
+    draft = _write_draft(tmp_path)
+    (tmp_path / "docker-compose.yml").write_text("services: {}\n")
+
+    result = CliRunner().invoke(cli, [
+        "profile", "review", str(draft), "--json", "--repo-path", str(tmp_path),
+    ])
+    payload = json.loads(result.stdout)
+    entry = next(u for u in payload["unresolved"]
+                 if u["path"] == "technology_stack.database")
+    by_hint = {e["hint"]: e["found"] for e in entry["evidence"]}
+    assert by_hint["docker-compose.yml"] is True
+    assert by_hint[".env.example"] is False
