@@ -24,6 +24,13 @@ datas = [
         os.path.join(repo_root, "src", "acsdd", "schemas", "profile.schema.json"),
         "acsdd/schemas",
     ),
+    # Claude Code skills installed into a consumer repo by `acsdd skill
+    # install`, read via importlib.resources.files("acsdd.assets").
+    (
+        os.path.join(repo_root, "src", "acsdd", "assets", "claude", "skills",
+                     "profile-review", "SKILL.md"),
+        "acsdd/assets/claude/skills/profile-review",
+    ),
 ]
 datas += collect_data_files("jsonschema_specifications")
 

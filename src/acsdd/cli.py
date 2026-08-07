@@ -4,6 +4,7 @@ Subcommand groups:
   acsdd capability   validate / list / show / generate
   acsdd catalog      build / verify
   acsdd profile      discover / validate / create / review
+  acsdd skill        list / install / show
 
 Top-level commands:
   acsdd update       self-update the standalone binary install
@@ -23,6 +24,13 @@ from acsdd.capability.validator import validate_manifest, validate_catalog
 from acsdd.catalog.builder import build_catalog_markdown, CATEGORY_ORDER, CATEGORY_DOC_DIR
 from acsdd.profile.generator import find_unresolved_fields, finalize_profile
 from acsdd.profile.validator import validate_profile_file
+from acsdd.skills import (
+    SkillError,
+    find_skill,
+    install_skill,
+    is_installed,
+    read_skill,
+)
 
 
 def _default_capabilities_dir() -> Path:
@@ -744,6 +752,16 @@ def profile_review(profile_path: Optional[Path], as_json: bool, repo_path: Path)
     else:
         click.echo("  acsdd profile create")
 
+    # Contextual, not part of the onboarding checklist: only surface the skill
+    # to someone who has work it could do and hasn't already installed it.
+    if report.unresolved and not is_installed("profile-review", Path.cwd()):
+        click.echo()
+        click.secho(
+            "Tip: `acsdd skill install` drops a Claude Code skill into this repo "
+            "that can do steps 1-3 for you.",
+            dim=True,
+        )
+
 
 def _print_unresolved_field(entry) -> None:
     """One block per unresolved field, wrapped so long hint text stays readable."""
@@ -780,6 +798,73 @@ def _print_unresolved_field(entry) -> None:
     else:
         _wrap("resolve:", "edit the draft in place")
     click.echo()
+
+
+# ---------------------------------------------------------------------
+# skill
+# ---------------------------------------------------------------------
+
+@cli.group()
+def skill():
+    """Install the Claude Code skills acsdd ships into this repository.
+
+    A noun group like capability/catalog/profile rather than a subcommand of
+    any one of them — the assets aren't profile-specific, and future skills for
+    capability authoring or catalog upkeep belong here too.
+    """
+
+
+@skill.command("list")
+@click.option("--dir", "repo_root", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              default=Path("."), help="Repo root to check for existing installs (default: cwd).")
+def skill_list(repo_root: Path):
+    """List the skills acsdd ships, and whether each is installed here."""
+    for asset in find_skill(None):
+        installed = is_installed(asset.name, repo_root)
+        mark = "[x]" if installed else "[ ]"
+        click.secho(f"  {mark} {asset.name}", fg="green" if installed else "yellow")
+        click.echo(f"        {asset.summary}")
+        click.echo(f"        -> {asset.dest}")
+
+
+@skill.command("install")
+@click.argument("name", required=False, default=None)
+@click.option("--dir", "repo_root", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              default=Path("."), help="Repo root to install into (default: cwd).")
+@click.option("--force", is_flag=True, default=False, help="Overwrite an existing skill file.")
+def skill_install(name: Optional[str], repo_root: Path, force: bool):
+    """Install a shipped skill into ./.claude/skills/ (default: all of them)."""
+    try:
+        assets = find_skill(name)
+    except SkillError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
+
+    skipped = False
+    for asset in assets:
+        result = install_skill(asset.name, repo_root, force=force)
+        if result.written:
+            click.secho(f"Wrote {result.path}", fg="green")
+        else:
+            skipped = True
+            click.secho(
+                f"ERROR: {result.path} already exists — re-run with --force to overwrite.",
+                fg="red",
+            )
+
+    if skipped:
+        sys.exit(1)
+
+
+@skill.command("show")
+@click.argument("name")
+def skill_show(name: str):
+    """Print a shipped skill's markdown to stdout."""
+    try:
+        click.echo(read_skill(name))
+    except SkillError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
