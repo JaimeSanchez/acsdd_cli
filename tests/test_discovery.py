@@ -19,6 +19,7 @@ import yaml
 from click.testing import CliRunner
 
 from acsdd.cli import cli
+from acsdd.profile.generator import find_unresolved_fields
 from acsdd.profile._discovery_impl import (
     ArchitectureDetector,
     ConventionDetector,
@@ -284,6 +285,72 @@ def test_profile_validate_strict_flags_unresolved_placeholders(tmp_path):
     assert strict.exit_code != 0
     assert "unresolved [REVIEW REQUIRED]" in strict.output
     assert "engineering_standards.code_style" in strict.output
+
+
+def test_review_covers_every_placeholder_real_discovery_emits(tmp_path):
+    # The drift detector. review.py's guidance table is written by hand against
+    # _discovery_impl's emission sites; adding a new placeholder there without a
+    # matching guidance entry silently degrades `profile review` to echoing a
+    # raw placeholder. This fails the suite instead.
+    _build_symfony_ddd_fixture(tmp_path)
+    output_dir = tmp_path / "profiles"
+    runner = CliRunner()
+
+    result = runner.invoke(cli, [
+        "profile", "discover", str(tmp_path),
+        "--profile-id", "drift-test", "--output", str(output_dir),
+    ])
+    assert result.exit_code == 0, result.output
+    draft_path = output_dir / "drift-test-draft.yaml"
+
+    review = runner.invoke(cli, [
+        "profile", "review", str(draft_path), "--json", "--repo-path", str(tmp_path),
+    ])
+    assert review.exit_code == 0, review.output
+    payload = json.loads(review.stdout)
+
+    profile = yaml.safe_load(draft_path.read_text())["profile"]
+    expected = find_unresolved_fields(profile)
+    assert expected, "the fixture should still produce placeholders"
+    assert payload["unresolved_count"] == len(expected)
+    assert [u["path"] for u in payload["unresolved"]] == expected
+
+    ungoverned = [u["path"] for u in payload["unresolved"] if not u["has_guidance"]]
+    assert ungoverned == [], (
+        f"no guidance registered in acsdd.profile.review for: {ungoverned}"
+    )
+
+
+def test_low_confidence_frontend_is_flagged_as_an_unresolved_placeholder(tmp_path):
+    # A bare package.json with no react/react-dom dependency scores 2 (the
+    # signature file alone), i.e. confidence 0.4 — below the 0.6 threshold, so
+    # ProfileGenerator marks technology_stack.frontend for review. That
+    # placeholder used to be *appended* to the detected value, which meant
+    # find_unresolved_fields' startswith() match never saw it and the field
+    # sailed through both `profile validate --strict` and `profile create`.
+    _build_symfony_ddd_fixture(tmp_path)
+    (tmp_path / "package.json").write_text(json.dumps({
+        "dependencies": {"lodash": "^4.17.21"},
+    }))
+    output_dir = tmp_path / "profiles"
+    runner = CliRunner()
+
+    result = runner.invoke(cli, [
+        "profile", "discover", str(tmp_path),
+        "--profile-id", "frontend-test", "--output", str(output_dir),
+    ])
+    assert result.exit_code == 0, result.output
+
+    draft_path = output_dir / "frontend-test-draft.yaml"
+    profile = yaml.safe_load(draft_path.read_text())["profile"]
+    frontend = profile["technology_stack"]["frontend"]
+    assert frontend.startswith("[REVIEW REQUIRED")
+    # The detected value is preserved inside the placeholder, not discarded.
+    assert "react" in frontend
+
+    strict = runner.invoke(cli, ["profile", "validate", str(draft_path), "--strict"])
+    assert strict.exit_code != 0
+    assert "technology_stack.frontend" in strict.output
 
 
 def test_health_metrics_parses_cobertura_coverage_xml(tmp_path):

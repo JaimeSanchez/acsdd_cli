@@ -67,6 +67,13 @@ jobs:
           ./dist/acsdd-${{ matrix.target }} capability list --manifests-dir capabilities/_manifests
           ./dist/acsdd-${{ matrix.target }} capability validate --manifests-dir capabilities/_manifests
           ./dist/acsdd-${{ matrix.target }} catalog verify --capabilities-dir capabilities
+          # pytest only ever exercises the source install, so this is the only
+          # place the packaged skill asset's importlib.resources path is proven
+          # to survive freezing. If acsdd.spec's `datas` list falls out of sync
+          # with pyproject's package-data, this is what catches it.
+          TMPREPO=$(mktemp -d)
+          ./dist/acsdd-${{ matrix.target }} skill install --dir "$TMPREPO"
+          test -s "$TMPREPO/.claude/skills/profile-review/SKILL.md"
 
       - name: Checksum
         # Compute from inside dist/ so the checksum file records the bare

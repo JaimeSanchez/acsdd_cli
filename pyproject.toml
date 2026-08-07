@@ -28,3 +28,6 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "acsdd.schemas" = ["*.json"]
+# Also has to be listed in packaging/acsdd.spec's `datas` — PyInstaller does
+# not read setuptools package-data. See the note in src/acsdd/skills.py.
+"acsdd.assets" = ["claude/skills/*/SKILL.md"]

@@ -854,7 +854,14 @@ class ProfileGenerator:
         if self.frontend_stack:
             frontend_value = self.frontend_stack.split("-")[-1]
             if self.frontend_confidence < 0.6:
-                frontend_value += " [REVIEW REQUIRED — low confidence, verify]"
+                # The placeholder has to be a *prefix*, not a suffix — every
+                # consumer (profile validate --strict, profile create's gate,
+                # profile review) finds these via find_unresolved_fields(),
+                # which does a str.startswith() against "[REVIEW REQUIRED".
+                # Appending it left this field invisible to all three. The
+                # detected value is kept inside the placeholder so the reviewer
+                # still sees what was guessed.
+                frontend_value = f"[REVIEW REQUIRED — low confidence, verify: {frontend_value}]"
         elif self.stack_info.get("language") in ("javascript", "typescript"):
             # The winning "backend" stack IS a JS/TS frontend framework
             # (e.g. repo only contains node-react, no separate backend).
