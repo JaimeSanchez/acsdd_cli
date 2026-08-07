@@ -77,10 +77,10 @@ acsdd profile discover .
 name (`my-project` here); pass `--profile-id something-else` to override it.
 This writes three files under `./acsdd/profiles/`: `my-project-draft.yaml`
 (the profile itself), a discovery report, and a recommendations doc.
-Detection is best-effort — open the draft YAML and fill in any
-`[REVIEW REQUIRED]` fields it couldn't determine on its own (e.g. an unusual
-stack, or a database engine it couldn't find a connection string for)
-before moving on.
+Detection is best-effort — it leaves a `[REVIEW REQUIRED]` placeholder
+wherever it couldn't determine something (an unusual stack, a database engine
+with no connection string to find, a security tool it makes no attempt to
+detect). Step 4 is about resolving those.
 
 **3. Validate the profile against the schema:**
 
@@ -94,7 +94,33 @@ just as happily on a draft still full of `[REVIEW REQUIRED]` placeholders as
 it does on a fully-reviewed one. It won't tell you whether you're actually
 done reviewing; that's what the next step is for.
 
-**4. Finalize the profile once you've resolved every placeholder:**
+**4. Resolve the `[REVIEW REQUIRED]` fields.** `validate` above tells you the
+draft is well-formed; this tells you what's still missing from it and how to
+fill it in:
+
+```bash
+acsdd profile review
+```
+
+For each unresolved field it prints what the field means, what discovery
+already tried and why it came up empty, which files in your repo to look at
+(marked found/missing), example or schema-allowed values, and whether to edit
+the draft or re-run discovery. It's informational, not a gate — it exits 0
+even when it finds work to do, so wire `acsdd profile validate --strict` into
+CI, never this.
+
+If you use Claude Code, you can hand the whole step over:
+
+```bash
+acsdd skill install     # writes .claude/skills/profile-review/SKILL.md
+```
+
+Then ask Claude Code to *"finish my ACSDD profile"*. It reads the same JSON
+this command emits (`acsdd profile review --json`), investigates your repo,
+proposes a value per field with the evidence it found, and waits for your
+sign-off before touching the draft.
+
+**5. Finalize the profile once you've resolved every placeholder:**
 
 ```bash
 acsdd profile create
@@ -110,7 +136,7 @@ profile. Once it's clean, it writes the finalized profile as
 `./acsdd/profiles/my-project.yaml` (`status: active`, version bumped to
 `1.0.0`) — this is the file to point at everything downstream from here.
 
-**5. Generate a capability manifest from that profile.** Do this once per
+**6. Generate a capability manifest from that profile.** Do this once per
 capability you want to define (an `AI-Collaborative` "unit of work" your
 repo supports, like "run database migrations" or "generate an API
 controller"). Pick an id (`<2-4 letter category>-<3 digits>`, e.g. `BE-001`)
@@ -132,7 +158,7 @@ specific capability — name, description, concrete inputs/outputs — as
 `[REVIEW REQUIRED]` placeholders. Fill those in yourself, or hand the draft
 manifest + your codebase to an AI coding agent and ask it to complete them.
 
-**6. Validate the manifest, then rebuild the catalog:**
+**7. Validate the manifest, then rebuild the catalog:**
 
 ```bash
 acsdd capability validate
@@ -140,7 +166,7 @@ acsdd catalog build
 ```
 
 `acsdd catalog build` regenerates `capabilities/CATALOG.md` from every
-manifest under `_manifests/` — repeat steps 5-6 for each new capability, and
+manifest under `_manifests/` — repeat steps 6-7 for each new capability, and
 re-run `catalog build` any time you add, version, or deprecate one. Wire
 `acsdd catalog verify` into CI (see [`acsdd catalog`](#acsdd-catalog) below)
 so a stale catalog or an invalid manifest fails the build automatically.
@@ -190,6 +216,8 @@ acsdd profile validate                                       # PROFILE_PATH defa
 acsdd profile validate acsdd/profiles/my-project-draft.yaml  # or set it explicitly
 acsdd profile create                                         # --draft defaults to ./acsdd/profiles
 acsdd profile create --draft acsdd/profiles/my-project-draft.yaml  # or set it explicitly
+acsdd profile review                                         # what's still [REVIEW REQUIRED], and how to resolve it
+acsdd profile review --json --repo-path .                    # same report, machine-readable
 ```
 
 `discover` runs PROFILE-001 style repository discovery — detects the
@@ -205,6 +233,40 @@ run while any `[REVIEW REQUIRED]` placeholder remains anywhere in the
 profile (listing exactly which fields), and otherwise writes a finalized
 profile (`status: active`, version bumped) alongside the draft, ready to
 hand to `capability generate`.
+
+`review` is the half neither of those provides: for every unresolved field it
+explains what the field means, what discovery already tried and why it missed,
+which files to inspect (annotated found/missing against `--repo-path`), example
+or schema-allowed values, any sibling field that has to move with it, and
+whether to edit the draft or re-run discovery. It also flags fields carrying no
+placeholder that are still at a discovery default — a `min_coverage` of `0`
+means no coverage gate at all.
+
+**`review` is informational, not a gate.** Unresolved fields are its expected
+input, so it exits 0 when it finds them; exit 1 is reserved for real failures
+(no profile found, unparseable YAML). Use `acsdd profile validate --strict` in
+CI — never `review`. `PROFILE_PATH` auto-detection prefers a *draft*, the
+opposite of `validate`'s preference, since a finalized profile has nothing left
+to review.
+
+### `acsdd skill`
+
+```bash
+acsdd skill list                    # shipped skills + whether each is installed here
+acsdd skill install                 # install all of them into ./.claude/skills/
+acsdd skill install profile-review  # or just one
+acsdd skill install --dir /path/to/repo --force
+acsdd skill show profile-review     # dump the markdown to stdout
+```
+
+Installs the [Claude Code](https://claude.com/claude-code) skills acsdd ships
+into a repository. Currently one: `profile-review`, which resolves a draft
+profile's `[REVIEW REQUIRED]` fields by investigating the repo, proposing a
+value per field with evidence, waiting for your sign-off, then finalizing.
+
+Installing is explicit and opt-in — `profile discover` never writes outside
+`./acsdd/profiles`, and `.claude/` belongs to a different tool and is often
+hand-edited, so an existing file is never overwritten without `--force`.
 
 ### `acsdd update`
 
@@ -231,11 +293,13 @@ acsdd-cli/
 ├── src/acsdd/
 │   ├── cli.py                     # click commands
 │   ├── update.py                  # self-update for the standalone binary
+│   ├── skills.py                  # installs the shipped Claude Code skills
 │   ├── schemas/                   # Appendix A & B JSON Schemas
+│   ├── assets/                    # files installed into a consumer repo (skills)
 │   ├── capability/                # manifest loading + validation + generation
 │   ├── catalog/                   # CATALOG.md generation
-│   └── profile/                   # repo discovery + profile validation/finalization
-├── tests/                         # pytest suite (51 tests)
+│   └── profile/                   # repo discovery + profile review/validation/finalization
+├── tests/                         # pytest suite (122 tests)
 └── capabilities/                  # example data: 4 real capability manifests + docs
     ├── CATALOG.md                 # generated — run `acsdd catalog build` to refresh
     ├── _manifests/

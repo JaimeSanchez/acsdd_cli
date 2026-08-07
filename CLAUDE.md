@@ -35,11 +35,15 @@ acsdd profile discover /path/to/repo   # --profile-id defaults to the dir name (
 # capabilities/_manifests/ if missing) — the workflow this tool is
 # designed around.
 acsdd profile discover /path/to/my-project
-# ...fill in any [REVIEW REQUIRED] fields in the draft, then:
+acsdd profile review    # what's still [REVIEW REQUIRED], and how to resolve it
+# ...fill in those fields in the draft, then:
 # (both --draft below and --profile further down default to whatever's
 # under ./acsdd/profiles — spelled out here only for clarity)
 acsdd profile create --draft acsdd/profiles/my-project-draft.yaml
 acsdd capability generate --id BE-001 --category BE
+
+# Install the packaged Claude Code skill that automates the review step
+acsdd skill install
 
 # Build the standalone PyInstaller binary locally
 pip install . pyinstaller
@@ -57,8 +61,8 @@ invent a lint step.
 ## Architecture
 
 **Entry point:** `src/acsdd/cli.py` defines one Click group (`acsdd`) with
-three subcommand groups — `capability`, `catalog`, `profile` — plus one
-top-level command, `update` — that are thin wrappers: they resolve a
+four subcommand groups — `capability`, `catalog`, `profile`, `skill` — plus
+one top-level command, `update` — that are thin wrappers: they resolve a
 manifests directory, call into the matching non-CLI module below, and format
 output. Keep business logic out of `cli.py`; put it in the module it belongs
 to so it stays testable without invoking Click.
@@ -78,6 +82,9 @@ whenever more than one plausible candidate exists. `_default_draft_profile_path`
 is the same idea for `profile create --draft`, but only ever matches
 `*-draft.yaml` — finalizing an already-finalized profile isn't the point of
 that command, so it must not silently pick one up.
+`_default_review_profile_path` composes the two for `profile review`, trying
+the draft *first*: `_default_profile_path`'s preference is inverted for that
+command, since a finalized profile by definition has nothing left to review.
 
 **`capability/`** — manifest loading, validation, and generation.
 - `loader.py`: `load_manifest`/`iter_manifests` — YAML I/O only, no schema
@@ -108,7 +115,7 @@ catalog verify` diffs a fresh render against the checked-in file (ignoring
 the `**Last generated:**` date) and fails if manifests and catalog have
 drifted, or if any manifest is invalid.
 
-**`profile/`** — repository discovery, profile validation, and finalization.
+**`profile/`** — repository discovery, review, validation, and finalization.
 - `_discovery_impl.py` (the bulk of the logic, ~1000 lines) implements
   PROFILE-001 style discovery as a pipeline of detector classes:
   `StackDetector` → `SymfonyStructureDetector` (backend-specific
@@ -132,6 +139,38 @@ drifted, or if any manifest is invalid.
   and bumps `meta.version` from the draft default `0.1.0` to `1.0.0` — this
   is the only place in the codebase that ever changes a profile's status
   away from `"draft"`.
+  **The prefix match is load-bearing.** Every placeholder `_discovery_impl.py`
+  emits must *start* with `[REVIEW REQUIRED` — a marker appended to a detected
+  value is invisible to `find_unresolved_fields`, and therefore to
+  `validate --strict`, `profile create`'s gate, and `profile review` all at
+  once. That was a real bug at `_discovery_impl.py`'s low-confidence frontend
+  branch; keep the detected value *inside* the placeholder instead.
+- `review.py`: backs `acsdd profile review`. Reuses `find_unresolved_fields`
+  (never re-implements the scan — that shared definition is what keeps the
+  three consumers agreeing) and maps each path to a `FieldGuidance` record:
+  what the field means, what detection was attempted and why it missed, which
+  files to inspect, allowed/example values, and whether it's fixable by editing
+  or only by re-running discovery. Lookup is index-normalized
+  (`...constraints[3].tool` → `...constraints[].tool`), then refined by the
+  sibling `id` for the cross-cutting constraints — the list index is an
+  artifact of `ProfileGenerator`'s literal ordering, so keying on it would
+  break the moment someone reorders the list. `guidance_for` never returns
+  `None` and never raises: an unregistered path degrades to echoing the raw
+  placeholder, which is why the drift test in `tests/test_discovery.py` (real
+  discovery output, every placeholder must have `has_guidance: true`) matters —
+  it's what stops that fallback becoming the normal case as new emission sites
+  land. The module is a static hint table plus `Path.exists()` probes; it
+  deliberately does not re-run detectors. Unlike its two siblings, the command
+  exits **0** when it finds unresolved fields — it's informational, not a gate.
+
+**`skills.py` + `assets/`** — backs `acsdd skill list/install/show`, which
+copies the Claude Code skills acsdd ships into a consumer repo's
+`.claude/skills/`. `assets/claude/skills/<name>/SKILL.md` mirrors the
+destination layout so installing is a straight copy. The split with `review.py`
+is deliberate and worth preserving: **per-field knowledge lives in `review.py`,
+procedure lives in `SKILL.md`.** The skill drives itself off
+`acsdd profile review --json` rather than restating detection facts in prose,
+which would go stale the first time a detector changed.
 
 **`update.py`** — backs `acsdd update`, self-updating a standalone binary
 install in place. Guarded by `is_frozen_binary()` (PyInstaller's `sys.frozen`
@@ -147,13 +186,19 @@ naming convention (`acsdd-{os}-{arch}`) is duplicated between `install.sh`
 and this module — if `release.yml`'s matrix or target naming ever changes,
 update both.
 
-**`schemas/`** — the two JSON Schemas are loaded at runtime via
-`importlib.resources.files("acsdd.schemas")`, not by relative filesystem
-path. Any new schema file must be added to
-`[tool.setuptools.package-data]` in `pyproject.toml` **and** to the
-`datas` list in `packaging/acsdd.spec` (PyInstaller doesn't pick up
-setuptools package-data automatically) or it will silently 404 at runtime
-in the standalone binary while working fine from source.
+**Packaged data files** — two packages ship non-Python files: `schemas/` (the
+two JSON Schemas, loaded via
+`importlib.resources.files("acsdd.schemas")`) and `assets/` (the Claude Code
+skills, loaded via `importlib.resources.files("acsdd.assets")`). Neither is
+ever addressed by a relative filesystem path or one derived from `__file__`.
+
+Any new file in either must be registered in **both**
+`[tool.setuptools.package-data]` in `pyproject.toml` **and** the `datas` list
+in `packaging/acsdd.spec` — PyInstaller doesn't pick up setuptools
+package-data automatically, so missing the second one silently 404s at runtime
+in the standalone binary while working fine from source. `release.yml`'s smoke
+test installs the skill from each built binary specifically to catch that
+desync before publish.
 
 ## Distribution: two install paths that must stay in sync
 
@@ -168,11 +213,12 @@ in the standalone binary while working fine from source.
    each binary is smoke-tested against `capabilities/` before upload,
    checksummed).
 
-If you change how the CLI locates data files (schemas, or anything else
-loaded via `importlib.resources`), verify both paths: `pytest` covers the
+If you change how the CLI locates data files (schemas, assets, or anything
+else loaded via `importlib.resources`), verify both paths: `pytest` covers the
 source path, but only building the binary
 (`pyinstaller packaging/acsdd.spec ...`) and running it with `src/` off
-`PYTHONPATH` proves the frozen path still works.
+`PYTHONPATH` proves the frozen path still works — e.g.
+`cd $(mktemp -d) && env -u PYTHONPATH /abs/path/dist/acsdd skill install`.
 
 ## Versioning
 
@@ -209,7 +255,8 @@ the latest GitHub release.
 
 Tests live in `tests/`, generally one file per package (`test_capability.py`,
 `test_profile.py`, `test_discovery.py`, `test_capability_generator.py`,
-`test_profile_generator.py`, `test_update.py`), plain `pytest` functions (no
+`test_profile_generator.py`, `test_profile_review.py`, `test_skills.py`,
+`test_update.py`), plain `pytest` functions (no
 test classes). `test_update.py` monkeypatches `is_frozen_binary`/
 `detect_platform`/`_download` rather than hitting the network or a real
 binary — keep that pattern for any future changes there. A
@@ -218,3 +265,18 @@ binary — keep that pattern for any future changes there. A
 `capabilities/_manifests/` example data — several tests validate against
 that real data directly rather than only synthetic fixtures, so changes to
 the example capabilities can break tests even if the tool code is untouched.
+
+Two tests are guards rather than coverage, and shouldn't be weakened to make a
+change pass:
+
+- `test_discovery.py::test_review_covers_every_placeholder_real_discovery_emits`
+  runs real discovery against the fixture repo and asserts every placeholder it
+  emits has a registered entry in `review.py`. Adding an emission site to
+  `_discovery_impl.py` without guidance fails here — that's the point.
+- `test_profile_review.py::test_allowed_values_match_the_json_schema` reads
+  `profile.schema.json` and checks the enums `review.py` keeps as plain
+  constants still match it.
+
+`test_skills.py` covers the packaged-asset load path for the *source* install
+only; the frozen half can't be tested from pytest and is asserted by
+`release.yml`'s smoke-test step instead.
