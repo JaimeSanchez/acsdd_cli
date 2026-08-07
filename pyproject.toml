@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "acsdd"
-version = "0.5.1"
+version = "0.6.0"
 description = "CLI for the ACSDD framework: capability manifests, the capability catalog, and repository engineering profiles."
 readme = "README.md"
 requires-python = ">=3.10"
