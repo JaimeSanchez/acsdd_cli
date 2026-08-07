@@ -286,6 +286,38 @@ def test_profile_validate_strict_flags_unresolved_placeholders(tmp_path):
     assert "engineering_standards.code_style" in strict.output
 
 
+def test_low_confidence_frontend_is_flagged_as_an_unresolved_placeholder(tmp_path):
+    # A bare package.json with no react/react-dom dependency scores 2 (the
+    # signature file alone), i.e. confidence 0.4 — below the 0.6 threshold, so
+    # ProfileGenerator marks technology_stack.frontend for review. That
+    # placeholder used to be *appended* to the detected value, which meant
+    # find_unresolved_fields' startswith() match never saw it and the field
+    # sailed through both `profile validate --strict` and `profile create`.
+    _build_symfony_ddd_fixture(tmp_path)
+    (tmp_path / "package.json").write_text(json.dumps({
+        "dependencies": {"lodash": "^4.17.21"},
+    }))
+    output_dir = tmp_path / "profiles"
+    runner = CliRunner()
+
+    result = runner.invoke(cli, [
+        "profile", "discover", str(tmp_path),
+        "--profile-id", "frontend-test", "--output", str(output_dir),
+    ])
+    assert result.exit_code == 0, result.output
+
+    draft_path = output_dir / "frontend-test-draft.yaml"
+    profile = yaml.safe_load(draft_path.read_text())["profile"]
+    frontend = profile["technology_stack"]["frontend"]
+    assert frontend.startswith("[REVIEW REQUIRED")
+    # The detected value is preserved inside the placeholder, not discarded.
+    assert "react" in frontend
+
+    strict = runner.invoke(cli, ["profile", "validate", str(draft_path), "--strict"])
+    assert strict.exit_code != 0
+    assert "technology_stack.frontend" in strict.output
+
+
 def test_health_metrics_parses_cobertura_coverage_xml(tmp_path):
     (tmp_path / "coverage.xml").write_text(
         '<?xml version="1.0"?><coverage line-rate="0.876"></coverage>'
