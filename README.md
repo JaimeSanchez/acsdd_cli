@@ -213,6 +213,8 @@ acsdd capability list --category DB       # filtered
 acsdd capability show DB-004              # full manifest + resolved dependency chain
 acsdd capability generate --id BE-005 --category BE   # --profile defaults to ./.acsdd/profiles
 acsdd capability generate --profile P --id BE-005 --category BE  # or set it explicitly
+acsdd capability remove BE-005            # list what would go (nothing is deleted)
+acsdd capability remove BE-005 --force    # actually delete it
 ```
 
 `validate` checks two things:
@@ -222,6 +224,14 @@ acsdd capability generate --profile P --id BE-005 --category BE  # or set it exp
 2. **Cross-manifest integrity** — every `dependencies[].capability`
    reference actually resolves to a manifest in the set, no capability
    depends on itself, and there are no circular dependency chains.
+
+`remove` is the inverse of `generate`: it deletes both files that command
+wrote — the manifest and the procedure doc — and then regenerates `CATALOG.md`
+so the catalog doesn't silently go stale (`--no-catalog` skips that). Without
+`--force` it only *lists* what it would delete. It refuses outright, `--force`
+or not, if any other capability depends on the one you're removing: that would
+leave dangling references that `capability validate` and `catalog verify` both
+fail on. Remove or update the dependents first.
 
 ### `acsdd catalog`
 
@@ -248,6 +258,8 @@ acsdd profile create                                         # --draft defaults 
 acsdd profile create --draft .acsdd/profiles/my-project-draft.yaml  # or set it explicitly
 acsdd profile review                                         # what's still [REVIEW REQUIRED], and how to resolve it
 acsdd profile review --json --repo-path .                    # same report, machine-readable
+acsdd profile remove my-project                              # list what would go (nothing is deleted)
+acsdd profile remove my-project --force                      # actually delete it
 ```
 
 `discover` runs PROFILE-001 style repository discovery — detects the
@@ -279,6 +291,12 @@ CI — never `review`. `PROFILE_PATH` auto-detection prefers a *draft*, the
 opposite of `validate`'s preference, since a finalized profile has nothing left
 to review.
 
+`remove` deletes every artifact belonging to one profile id — the draft, the
+finalized profile, and both discovery markdown reports — after listing them.
+Unlike the other profile commands it won't auto-detect which profile you mean:
+the id is required, because guessing wrong here costs you files rather than an
+error message.
+
 ### `acsdd skill`
 
 ```bash
@@ -287,6 +305,7 @@ acsdd skill install                 # install all of them into ./.claude/skills/
 acsdd skill install profile-review  # or just one
 acsdd skill install --dir /path/to/repo --force
 acsdd skill show profile-review     # dump the markdown to stdout
+acsdd skill remove profile-review --force   # uninstall it again
 ```
 
 Installs the [Claude Code](https://claude.com/claude-code) skills acsdd ships
@@ -297,6 +316,10 @@ value per field with evidence, waiting for your sign-off, then finalizing.
 Installing is explicit and opt-in — `profile discover` never writes outside
 `./.acsdd/profiles`, and `.claude/` belongs to a different tool and is often
 hand-edited, so an existing file is never overwritten without `--force`.
+
+`remove` takes a skill name (never "all of them" by default, unlike `install`)
+and cleans up the emptied `.claude/skills/<name>/` directory, but leaves
+`.claude/skills/` itself alone — other tools keep their skills there too.
 
 ### `acsdd update`
 

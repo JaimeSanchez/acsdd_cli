@@ -1,10 +1,10 @@
 """acsdd — command-line tool for the ACSDD framework.
 
 Subcommand groups:
-  acsdd capability   validate / list / show / generate
+  acsdd capability   validate / list / show / generate / remove
   acsdd catalog      build / verify
-  acsdd profile      discover / validate / create / review
-  acsdd skill        list / install / show
+  acsdd profile      discover / validate / create / review / remove
+  acsdd skill        list / install / show / remove
 
 Top-level commands:
   acsdd update       self-update the standalone binary install
@@ -20,23 +20,27 @@ import click
 from acsdd import __version__
 from acsdd.capability.generator import scaffold_manifest
 from acsdd.capability.loader import iter_manifests, ManifestLoadError
+from acsdd.capability.remover import CapabilityNotFoundError, plan_removal
 from acsdd.capability.validator import validate_manifest, validate_catalog
 from acsdd.catalog.builder import build_catalog_markdown, CATEGORY_ORDER, CATEGORY_DOC_DIR
 from acsdd.paths import (
     ACSDD_DIR,
     DEFAULT_PROFILES_DIR,
     MANIFESTS_SUBDIR,
+    profile_artifact_paths,
     resolve_capabilities_dir,
     resolve_profiles_dir,
 )
 from acsdd.profile.generator import find_unresolved_fields, finalize_profile
 from acsdd.profile.validator import validate_profile_file
+from acsdd.removal import remove_paths
 from acsdd.skills import (
     SkillError,
     find_skill,
     install_skill,
     is_installed,
     read_skill,
+    remove_skill,
 )
 
 
@@ -70,6 +74,27 @@ def _warn_legacy_layout(path: Path):
         fg="yellow",
         err=True,
     )
+
+
+def _require_force_to_remove(paths: list, force: bool):
+    """Shows what a `remove` command would delete, and stops unless --force.
+
+    Deliberately a flag rather than a click.confirm prompt: every other
+    destructive edge in this tool is gated the same way ("re-run with --force
+    to overwrite"), and a prompt would make the remove commands the only ones
+    that can't run unattended.
+    """
+    if force:
+        return
+
+    click.echo("Would remove:")
+    for path in paths:
+        click.echo(f"  - {path}")
+    click.secho(
+        "ERROR: refusing to delete without confirmation — re-run with --force to remove.",
+        fg="red",
+    )
+    sys.exit(1)
 
 
 def _default_capabilities_dir() -> Path:
@@ -477,6 +502,67 @@ def capability_generate(profile_path: Optional[Path], cap_id: str, category: str
     click.echo("  4. acsdd catalog build")
 
 
+@capability.command("remove")
+@click.argument("capability_id")
+@click.option("--capabilities-dir", type=click.Path(path_type=Path), default=None,
+              help="Root capabilities directory (default: auto-detected).")
+@click.option("--force", is_flag=True, default=False,
+              help="Actually delete. Without it, the files are only listed.")
+@click.option("--no-catalog", is_flag=True, default=False,
+              help="Skip regenerating CATALOG.md afterwards.")
+def capability_remove(capability_id: str, capabilities_dir: Optional[Path],
+                       force: bool, no_catalog: bool):
+    """Delete a capability's manifest and its procedure doc.
+
+    Refuses outright if any other capability depends on this one — that would
+    leave dangling references that `capability validate` and `catalog verify`
+    both fail on. Rebuilds CATALOG.md afterwards so the catalog doesn't go
+    stale behind you.
+    """
+    capabilities_dir = capabilities_dir or _default_capabilities_dir()
+    manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
+    manifests, load_errors = _load_all(manifests_dir)
+    for err in load_errors:
+        click.secho(f"WARN  {err}", fg="yellow")
+
+    try:
+        plan = plan_removal(capabilities_dir, manifests_dir, manifests, capability_id)
+    except CapabilityNotFoundError:
+        click.secho(f"Capability '{capability_id}' not found in {manifests_dir}", fg="red")
+        sys.exit(1)
+
+    # Checked before the --force gate on purpose: --force is consent to delete
+    # your own files, not consent to break every other manifest in the tree.
+    if plan.dependents:
+        click.secho(
+            f"ERROR: cannot remove {capability_id} — "
+            f"{len(plan.dependents)} capabilit{'y' if len(plan.dependents) == 1 else 'ies'} "
+            f"depend{'s' if len(plan.dependents) == 1 else ''} on it:",
+            fg="red",
+        )
+        for dep_id, dep_name in plan.dependents:
+            click.echo(f"  - {dep_id} ({dep_name})")
+        click.echo("Update or remove those first.")
+        sys.exit(1)
+
+    _require_force_to_remove(plan.paths, force)
+
+    for path in remove_paths(plan.paths, protect=[manifests_dir]):
+        click.secho(f"Removed {path}", fg="green")
+
+    catalog_path = capabilities_dir / "CATALOG.md"
+    if no_catalog or not catalog_path.exists():
+        return
+
+    remaining = {k: v for k, v in manifests.items() if k != capability_id}
+    catalog_path.write_text(
+        build_catalog_markdown(remaining, docs_root=capabilities_dir,
+                               manifests_root=manifests_dir),
+        encoding="utf-8",
+    )
+    click.secho(f"Wrote {catalog_path} ({len(remaining)} capabilities)", fg="green")
+
+
 # ---------------------------------------------------------------------
 # catalog
 # ---------------------------------------------------------------------
@@ -852,6 +938,40 @@ def _print_unresolved_field(entry) -> None:
     click.echo()
 
 
+@profile.command("remove")
+@click.argument("profile_id")
+@click.option("--profiles-dir", type=click.Path(path_type=Path), default=None,
+              help="Directory holding the profile (default: auto-detected .acsdd/profiles).")
+@click.option("--force", is_flag=True, default=False,
+              help="Actually delete. Without it, the files are only listed.")
+def profile_remove(profile_id: str, profiles_dir: Optional[Path], force: bool):
+    """Delete every artifact belonging to PROFILE_ID.
+
+    That's the draft, the finalized profile, and the two discovery markdown
+    reports — whichever of them exist. PROFILE_ID is required rather than
+    auto-detected: the other profile commands guess a path only because
+    guessing wrong there costs an error message.
+    """
+    if profiles_dir is None:
+        profiles_dir = _profiles_dir()
+        if profiles_dir is None:
+            click.secho(
+                "ERROR: no --profiles-dir given and this repo has no ./.acsdd/profiles.",
+                fg="red",
+            )
+            sys.exit(1)
+
+    existing = [p for p in profile_artifact_paths(profiles_dir, profile_id) if p.exists()]
+    if not existing:
+        click.secho(f"No artifacts for profile '{profile_id}' in {profiles_dir}", fg="red")
+        sys.exit(1)
+
+    _require_force_to_remove(existing, force)
+
+    for path in remove_paths(existing, protect=[profiles_dir]):
+        click.secho(f"Removed {path}", fg="green")
+
+
 # ---------------------------------------------------------------------
 # skill
 # ---------------------------------------------------------------------
@@ -906,6 +1026,36 @@ def skill_install(name: Optional[str], repo_root: Path, force: bool):
 
     if skipped:
         sys.exit(1)
+
+
+@skill.command("remove")
+@click.argument("name")
+@click.option("--dir", "repo_root", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              default=Path("."), help="Repo root to remove from (default: cwd).")
+@click.option("--force", is_flag=True, default=False,
+              help="Actually delete. Without it, the file is only listed.")
+def skill_remove(name: str, repo_root: Path, force: bool):
+    """Remove an installed skill from ./.claude/skills/.
+
+    NAME is required, unlike `skill install` where omitting it means "all of
+    them" — that isn't a default worth having on a delete. The `.claude/skills/`
+    directory itself is left alone; it belongs to Claude Code, not to acsdd.
+    """
+    try:
+        asset = find_skill(name)[0]
+    except SkillError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
+
+    target = repo_root / asset.dest
+    if not target.exists():
+        click.secho(f"ERROR: {target} is not installed.", fg="red")
+        sys.exit(1)
+
+    _require_force_to_remove([target], force)
+
+    result = remove_skill(name, repo_root)
+    click.secho(f"Removed {result.path}", fg="green")
 
 
 @skill.command("show")

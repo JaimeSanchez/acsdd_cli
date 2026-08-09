@@ -15,7 +15,7 @@ This module is the only place either layout is spelled out. Don't hardcode
 """
 
 from pathlib import Path
-from typing import Tuple
+from typing import List, Tuple
 
 # The hidden root every acsdd artifact lives under.
 ACSDD_DIR = ".acsdd"
@@ -79,3 +79,25 @@ def resolve_capabilities_dir(cwd: Path) -> Tuple[Path, bool]:
             return legacy, True
 
     return cwd / ACSDD_DIR / CAPABILITIES_SUBDIR, False
+
+
+def profile_artifact_paths(profiles_dir: Path, profile_id: str,
+                           include_finalized: bool = True) -> List[Path]:
+    """Every file that belongs to one profile, whether or not it exists yet.
+
+    `profile discover` writes three of these and `profile create` the fourth,
+    so "which files are this profile" is a layout question and belongs here
+    rather than being spelled out at each site that needs the set.
+
+    `include_finalized=False` drops ``<id>.yaml`` and leaves exactly what
+    discovery itself writes — that command's overwrite guard has to stay blind
+    to a finalized profile sitting alongside the draft.
+    """
+    paths = [
+        profiles_dir / f"{profile_id}-draft.yaml",
+        profiles_dir / f"{profile_id}-discovery-report.md",
+        profiles_dir / f"{profile_id}-recommendations.md",
+    ]
+    if include_finalized:
+        paths.append(profiles_dir / f"{profile_id}.yaml")
+    return paths

@@ -17,6 +17,7 @@ from acsdd.skills import (
     install_skill,
     is_installed,
     read_skill,
+    remove_skill,
     skill_names,
 )
 
@@ -107,3 +108,66 @@ def test_skill_show_dumps_the_markdown():
     result = CliRunner().invoke(cli, ["skill", "show", "profile-review"])
     assert result.exit_code == 0, result.output
     assert "name: profile-review" in result.output
+
+
+def test_remove_skill_reports_a_no_op_when_not_installed(tmp_path):
+    result = remove_skill("profile-review", tmp_path)
+    assert result.removed is False
+
+
+def test_remove_skill_raises_on_an_unknown_name(tmp_path):
+    with pytest.raises(SkillError):
+        remove_skill("nope", tmp_path)
+
+
+def test_skill_remove_cli_round_trip(tmp_path):
+    runner = CliRunner()
+    runner.invoke(cli, ["skill", "install", "--dir", str(tmp_path)])
+    assert "[x] profile-review" in runner.invoke(
+        cli, ["skill", "list", "--dir", str(tmp_path)]).output
+
+    result = runner.invoke(cli, [
+        "skill", "remove", "profile-review", "--dir", str(tmp_path), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert "Removed" in result.output
+    assert is_installed("profile-review", tmp_path) is False
+    assert "[ ] profile-review" in runner.invoke(
+        cli, ["skill", "list", "--dir", str(tmp_path)]).output
+
+
+def test_skill_remove_refuses_without_force(tmp_path):
+    runner = CliRunner()
+    runner.invoke(cli, ["skill", "install", "--dir", str(tmp_path)])
+
+    result = runner.invoke(cli, ["skill", "remove", "profile-review", "--dir", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "Would remove:" in result.output
+    assert is_installed("profile-review", tmp_path) is True
+
+
+def test_skill_remove_leaves_the_claude_skills_dir_in_place(tmp_path):
+    # .claude/skills/ is Claude Code's, not acsdd's — pruning it would delete
+    # other tools' skills along with ours.
+    runner = CliRunner()
+    runner.invoke(cli, ["skill", "install", "--dir", str(tmp_path)])
+    runner.invoke(cli, ["skill", "remove", "profile-review", "--dir", str(tmp_path), "--force"])
+
+    assert (tmp_path / ".claude" / "skills").is_dir()
+    assert not (tmp_path / ".claude" / "skills" / "profile-review").exists()
+
+
+def test_skill_remove_on_an_uninstalled_skill_exits_1(tmp_path):
+    result = CliRunner().invoke(cli, [
+        "skill", "remove", "profile-review", "--dir", str(tmp_path), "--force",
+    ])
+    assert result.exit_code == 1
+    assert "is not installed" in result.output
+
+
+def test_skill_remove_rejects_an_unknown_name(tmp_path):
+    result = CliRunner().invoke(cli, [
+        "skill", "remove", "nope", "--dir", str(tmp_path), "--force",
+    ])
+    assert result.exit_code == 1
+    assert "unknown skill 'nope'" in result.output
