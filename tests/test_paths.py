@@ -1,6 +1,10 @@
 """Layout resolution: the new .acsdd/ root plus the pre-.acsdd fallback."""
 
-from acsdd.paths import resolve_capabilities_dir, resolve_profiles_dir
+from acsdd.paths import (
+    profile_artifact_paths,
+    resolve_capabilities_dir,
+    resolve_profiles_dir,
+)
 
 
 # ---------------------------------------------------------------------
@@ -121,3 +125,32 @@ def test_capabilities_ignores_a_tree_without_manifests(tmp_path):
 
     assert resolved == tmp_path / ".acsdd" / "capabilities"
     assert is_legacy is False
+
+
+# ---------------------------------------------------------------------
+# profile artifact set
+# ---------------------------------------------------------------------
+
+def test_profile_artifact_paths_covers_all_four_files(tmp_path):
+    paths = profile_artifact_paths(tmp_path, "demo")
+
+    assert [p.name for p in paths] == [
+        "demo-draft.yaml",
+        "demo-discovery-report.md",
+        "demo-recommendations.md",
+        "demo.yaml",
+    ]
+    assert all(p.parent == tmp_path for p in paths)
+
+
+def test_profile_artifact_paths_can_exclude_the_finalized_profile(tmp_path):
+    # What `profile discover` writes, and therefore what its overwrite guard
+    # is allowed to trip on — a finalized profile next door must not block it.
+    paths = profile_artifact_paths(tmp_path, "demo", include_finalized=False)
+
+    assert tmp_path / "demo.yaml" not in paths
+    assert len(paths) == 3
+
+
+def test_profile_artifact_paths_does_not_require_the_files_to_exist(tmp_path):
+    assert not any(p.exists() for p in profile_artifact_paths(tmp_path, "nope"))

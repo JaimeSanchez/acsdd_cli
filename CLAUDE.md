@@ -45,6 +45,12 @@ acsdd capability generate --id BE-001 --category BE
 # Install the packaged Claude Code skill that automates the review step
 acsdd skill install
 
+# Undo any of the above. Every `remove` lists what it would delete and does
+# nothing without --force (see "Removal" under Architecture).
+acsdd capability remove BE-001 --force
+acsdd profile remove my-project --force
+acsdd skill remove profile-review --force
+
 # Build the standalone PyInstaller binary locally
 pip install . pyinstaller
 pyinstaller packaging/acsdd.spec --distpath dist --workpath build --clean
@@ -62,7 +68,8 @@ invent a lint step.
 
 **Entry point:** `src/acsdd/cli.py` defines one Click group (`acsdd`) with
 four subcommand groups — `capability`, `catalog`, `profile`, `skill` — plus
-one top-level command, `update` — that are thin wrappers: they resolve a
+one top-level command, `update`. Three of the groups carry a `remove`
+subcommand (see **Removal** below). All are thin wrappers: they resolve a
 manifests directory, call into the matching non-CLI module below, and format
 output. Keep business logic out of `cli.py`; put it in the module it belongs
 to so it stays testable without invoking Click.
@@ -79,6 +86,12 @@ out anywhere else**; call a resolver. `resolve_capabilities_dir` checks both
 candidates at *each* level of its walk-up before ascending — two sequential
 per-layout walks would let a distant ancestor's `.acsdd/capabilities` beat the
 legacy `capabilities/` of the repo you're standing in.
+
+`profile_artifact_paths` lives here for the same reason: "which four files make
+up one profile" (draft, finalized, discovery report, recommendations) is a
+layout question. `profile remove` wants all four; `profile discover`'s overwrite
+guard passes `include_finalized=False` because it must stay blind to a finalized
+profile sitting next to the draft it's about to rewrite.
 
 `cli.py`'s `_default_capabilities_dir` / `_profiles_dir` wrap those resolvers
 and emit the legacy nudge via `_warn_legacy_layout` — stderr only (stdout
@@ -100,7 +113,7 @@ that command, so it must not silently pick one up.
 the draft *first*: `_default_profile_path`'s preference is inverted for that
 command, since a finalized profile by definition has nothing left to review.
 
-**`capability/`** — manifest loading, validation, and generation.
+**`capability/`** — manifest loading, validation, generation, and removal.
 - `loader.py`: `load_manifest`/`iter_manifests` — YAML I/O only, no schema
   checks. Raises `ManifestLoadError` on unparseable YAML.
 - `validator.py`: `validate_manifest` (per-file JSON Schema check against
@@ -119,15 +132,24 @@ command, since a finalized profile by definition has nothing left to review.
   `capability_configuration.default_adapter` — everywhere else it's written
   by `profile discover` and never consumed, a naming convention rather than
   an enforced link.
+- `remover.py`: `plan_removal`/`find_dependents` — works out what `acsdd
+  capability remove` would delete and what it would break, without deleting
+  anything (that's `removal.remove_paths`). It finds the procedure doc via
+  `builder.find_doc_file` rather than reconstructing `generate`'s
+  `<cap-id-lower>.md` filename, so a hand-renamed doc still gets cleaned up.
+  `find_dependents` walks the same edge set as `validate_catalog`, which is
+  what makes "refuse if non-empty" equivalent to "never create a dangling ref."
 
 **`catalog/builder.py`** — `build_catalog_markdown` regenerates
 `.acsdd/capabilities/CATALOG.md` purely from the manifest dicts (grouped by a
 fixed `CATEGORY_ORDER`, with a rendered dependency graph and best-effort
-procedure-doc links via `_doc_link`, which greps category doc folders for a
-matching capability id). **`CATALOG.md` is a generated file** — `acsdd
-catalog verify` diffs a fresh render against the checked-in file (ignoring
-the `**Last generated:**` date) and fails if manifests and catalog have
-drifted, or if any manifest is invalid.
+procedure-doc links via `_doc_link`, a formatter over `find_doc_file`, which
+greps category doc folders for a matching capability id — matching on *content*
+rather than filename, since docs predate the scaffolder's naming convention).
+**`CATALOG.md` is a generated file** — `acsdd catalog verify` diffs a fresh
+render against the checked-in file (ignoring the `**Last generated:**` date) and
+fails if manifests and catalog have drifted, or if any manifest is invalid.
+`capability remove` rebuilds it inline for the same reason.
 
 **`profile/`** — repository discovery, review, validation, and finalization.
 - `_discovery_impl.py` (the bulk of the logic, ~1000 lines) implements
@@ -159,6 +181,11 @@ drifted, or if any manifest is invalid.
   `validate --strict`, `profile create`'s gate, and `profile review` all at
   once. That was a real bug at `_discovery_impl.py`'s low-confidence frontend
   branch; keep the detected value *inside* the placeholder instead.
+- `profile remove` has no module of its own: the file set comes from
+  `paths.profile_artifact_paths` and the deletion from `removal.remove_paths`,
+  leaving nothing for a `profile/remover.py` to hold. Its profile id is a
+  required argument — the auto-detection the other profile commands do is
+  wrong here, where a bad guess costs files rather than an error message.
 - `review.py`: backs `acsdd profile review`. Reuses `find_unresolved_fields`
   (never re-implements the scan — that shared definition is what keeps the
   three consumers agreeing) and maps each path to a `FieldGuidance` record:
@@ -177,14 +204,36 @@ drifted, or if any manifest is invalid.
   deliberately does not re-run detectors. Unlike its two siblings, the command
   exits **0** when it finds unresolved fields — it's informational, not a gate.
 
-**`skills.py` + `assets/`** — backs `acsdd skill list/install/show`, which
-copies the Claude Code skills acsdd ships into a consumer repo's
+**`skills.py` + `assets/`** — backs `acsdd skill list/install/show/remove`,
+which copies the Claude Code skills acsdd ships into a consumer repo's
 `.claude/skills/`. `assets/claude/skills/<name>/SKILL.md` mirrors the
 destination layout so installing is a straight copy. The split with `review.py`
 is deliberate and worth preserving: **per-field knowledge lives in `review.py`,
 procedure lives in `SKILL.md`.** The skill drives itself off
 `acsdd profile review --json` rather than restating detection facts in prose,
-which would go stale the first time a detector changed.
+which would go stale the first time a detector changed. `remove_skill` mirrors
+`install_skill` down to reporting a no-op through its result rather than
+raising; it cleans up the emptied `.claude/skills/<name>/` but never
+`.claude/skills/` itself, which hosts other tools' skills too.
+
+**`removal.py`** — `remove_paths(paths, protect=...)`, the one deletion
+primitive, shared by all three `remove` commands. *What* to delete is answered
+per-artifact elsewhere (`capability.remover`, `paths.profile_artifact_paths`,
+`skills.remove_skill`); this only unlinks and then prunes the directories it
+emptied. `protect` exists because two directories are structural rather than
+incidental: `_manifests/` is how `resolve_capabilities_dir` recognizes a
+capabilities tree at all, and a profiles directory that vanished with its last
+profile would read as "never onboarded". Pruning stops at immediate parents so
+emptying `backend/` can't cascade up into the capabilities root.
+
+**Removal is `--force`-guarded, never prompted.** `cli.py`'s
+`_require_force_to_remove` lists what would go and exits 1 without the flag.
+That's the same shape as every other destructive edge in the tool (`already
+exists — re-run with --force to overwrite`) and keeps the commands usable
+unattended; there is deliberately no `click.confirm` anywhere in this codebase.
+The one thing `--force` does *not* override is `capability remove`'s dependent
+check — consent to delete your own files isn't consent to leave dangling refs
+in everyone else's manifests.
 
 **`update.py`** — backs `acsdd update`, self-updating a standalone binary
 install in place. Guarded by `is_frozen_binary()` (PyInstaller's `sys.frozen`
@@ -279,6 +328,13 @@ binary — keep that pattern for any future changes there. A
 `.acsdd/capabilities/_manifests/` example data — several tests validate against
 that real data directly rather than only synthetic fixtures, so changes to
 the example capabilities can break tests even if the tool code is untouched.
+
+The `remove` commands have no test file of their own; each one's tests sit with
+its create counterpart (`test_capability_generator.py`, `test_profile_generator.py`,
+`test_skills.py`), because the useful test is the round trip. Every
+no-`--force` test must assert the files are **still on disk** afterwards, not
+just that the exit code was 1 — a command that prints the refusal *and* deletes
+would pass the weaker assertion.
 
 Two tests are guards rather than coverage, and shouldn't be weakened to make a
 change pass:

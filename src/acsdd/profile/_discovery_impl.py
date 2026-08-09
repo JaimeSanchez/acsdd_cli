@@ -23,7 +23,7 @@ from datetime import datetime
 from collections import Counter
 from typing import Dict, List, Optional, Tuple
 
-from acsdd.paths import DEFAULT_PROFILES_DIR
+from acsdd.paths import DEFAULT_PROFILES_DIR, profile_artifact_paths
 
 try:
     import tomllib  # stdlib, Python 3.11+
@@ -1283,11 +1283,10 @@ def main(argv=None):
     # REQUIRED] fields) before it's trusted — silently overwriting those
     # edits on a re-run would destroy that work with no way back.
     existing = [
-        output_dir / f"{args.profile_id}-draft.yaml",
-        output_dir / f"{args.profile_id}-discovery-report.md",
-        output_dir / f"{args.profile_id}-recommendations.md",
+        p for p in profile_artifact_paths(output_dir, args.profile_id,
+                                          include_finalized=False)
+        if p.exists()
     ]
-    existing = [p for p in existing if p.exists()]
     if existing and not args.force:
         print("ERROR: Output file(s) already exist — re-run with --force to overwrite:")
         for p in existing:

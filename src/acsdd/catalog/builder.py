@@ -39,15 +39,19 @@ CATEGORY_DOC_DIR = {
 }
 
 
-def _doc_link(cap_id: str, category: str, docs_dir: Path, manifests_root: Path) -> str:
-    """Best-effort: find a procedure doc under <docs_dir>/<category-dir>/
-    whose content mentions this capability id, so the catalog links to it
-    without requiring a rigid naming convention."""
-    category_dir_name = CATEGORY_DOC_DIR.get(category, category.lower())
+def find_doc_file(cap_id: str, category: str, docs_dir: Path,
+                  manifests_root: Path) -> Path | None:
+    """Best-effort: the procedure doc under <docs_dir>/<category-dir>/ whose
+    content mentions this capability id, or None.
 
-    category_dir = docs_dir / category_dir_name
+    Matching is on content rather than filename deliberately — docs predate
+    the scaffolder and don't all follow its ``<cap-id-lower>.md`` convention.
+    Shared with acsdd.capability.remover, which has to find the same file to
+    delete it; guessing the filename there would orphan a renamed doc.
+    """
+    category_dir = docs_dir / CATEGORY_DOC_DIR.get(category, category.lower())
     if not category_dir.is_dir():
-        return "—"
+        return None
 
     for md_file in sorted(category_dir.glob("*.md")):
         try:
@@ -55,9 +59,18 @@ def _doc_link(cap_id: str, category: str, docs_dir: Path, manifests_root: Path) 
         except OSError:
             continue
         if f"# {cap_id}" in text or f"**Manifest:** `{manifests_root.name}/{cap_id}.yaml`" in text:
-            rel = md_file.relative_to(docs_dir)
-            return f"[{category_dir_name}/{md_file.name}]({rel.as_posix()})"
-    return "—"
+            return md_file
+    return None
+
+
+def _doc_link(cap_id: str, category: str, docs_dir: Path, manifests_root: Path) -> str:
+    """The catalog's markdown link to a capability's procedure doc, or an em
+    dash when there isn't one."""
+    md_file = find_doc_file(cap_id, category, docs_dir, manifests_root)
+    if md_file is None:
+        return "—"
+    rel = md_file.relative_to(docs_dir)
+    return f"[{rel.as_posix()}]({rel.as_posix()})"
 
 
 def build_catalog_markdown(manifests: Dict[str, Dict], docs_root: Path,

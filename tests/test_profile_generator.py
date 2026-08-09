@@ -207,3 +207,105 @@ def test_profile_create_refuses_invalid_schema(tmp_path):
     runner = CliRunner()
     result = runner.invoke(cli, ["profile", "create", "--draft", str(draft_path)])
     assert result.exit_code != 0
+
+
+# ---------------------------------------------------------------------
+# profile remove
+# ---------------------------------------------------------------------
+
+def _write_all_four_artifacts(profiles_dir: Path, profile_id: str = "demo") -> list:
+    """Everything discover + create between them leave behind."""
+    profiles_dir.mkdir(parents=True, exist_ok=True)
+    paths = [
+        profiles_dir / f"{profile_id}-draft.yaml",
+        profiles_dir / f"{profile_id}-discovery-report.md",
+        profiles_dir / f"{profile_id}-recommendations.md",
+        profiles_dir / f"{profile_id}.yaml",
+    ]
+    for path in paths:
+        path.write_text("placeholder\n")
+    return paths
+
+
+def test_profile_remove_deletes_every_artifact(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    paths = _write_all_four_artifacts(tmp_path / ".acsdd" / "profiles")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profile", "remove", "demo", "--force"])
+    assert result.exit_code == 0, result.output
+    assert not any(p.exists() for p in paths)
+    assert result.output.count("Removed") == 4
+
+
+def test_profile_remove_ignores_a_partial_artifact_set(tmp_path):
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
+    profiles_dir.mkdir(parents=True)
+    draft = profiles_dir / "demo-draft.yaml"
+    draft.write_text("placeholder\n")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, [
+        "profile", "remove", "demo", "--profiles-dir", str(profiles_dir), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert not draft.exists()
+
+
+def test_profile_remove_leaves_other_profiles_alone(tmp_path):
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
+    _write_all_four_artifacts(profiles_dir, "demo")
+    keepers = _write_all_four_artifacts(profiles_dir, "other")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, [
+        "profile", "remove", "demo", "--profiles-dir", str(profiles_dir), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert all(p.exists() for p in keepers)
+
+
+def test_profile_remove_refuses_without_force(tmp_path):
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
+    paths = _write_all_four_artifacts(profiles_dir)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, [
+        "profile", "remove", "demo", "--profiles-dir", str(profiles_dir),
+    ])
+    assert result.exit_code == 1
+    assert "Would remove:" in result.output
+    assert all(p.exists() for p in paths)
+
+
+def test_profile_remove_keeps_the_profiles_dir_when_the_last_one_goes(tmp_path):
+    # An empty .acsdd/profiles still means "onboarded"; a missing one doesn't.
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
+    _write_all_four_artifacts(profiles_dir)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, [
+        "profile", "remove", "demo", "--profiles-dir", str(profiles_dir), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert profiles_dir.is_dir()
+
+
+def test_profile_remove_unknown_id_exits_1(tmp_path):
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
+    profiles_dir.mkdir(parents=True)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, [
+        "profile", "remove", "nope", "--profiles-dir", str(profiles_dir), "--force",
+    ])
+    assert result.exit_code == 1
+    assert "nope" in result.output
+
+
+def test_profile_remove_errors_when_repo_has_no_profiles_dir(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profile", "remove", "demo", "--force"])
+    assert result.exit_code == 1
+    assert ".acsdd/profiles" in result.output

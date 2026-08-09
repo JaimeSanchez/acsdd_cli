@@ -20,6 +20,8 @@ from importlib import resources
 from pathlib import Path, PurePosixPath
 from typing import Dict, List, Optional
 
+from acsdd.removal import remove_paths
+
 
 class SkillError(Exception):
     """Raised for an unknown skill name or an unreadable packaged asset."""
@@ -40,6 +42,14 @@ class InstallResult:
     name: str
     path: Path
     written: bool
+
+
+@dataclass(frozen=True)
+class RemoveResult:
+    name: str
+    path: Path
+    # False when the skill wasn't installed here in the first place.
+    removed: bool
 
 
 SKILLS: Dict[str, SkillAsset] = {
@@ -83,6 +93,27 @@ def install_skill(name: str, repo_root: Path, force: bool = False) -> InstallRes
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
     return InstallResult(name=name, path=target, written=True)
+
+
+def remove_skill(name: str, repo_root: Path) -> RemoveResult:
+    """Deletes an installed skill from repo_root.
+
+    Mirrors install_skill: reports a no-op via the result rather than raising
+    when the file isn't there, and still raises SkillError for a name acsdd
+    doesn't ship. The emptied ``<name>/`` directory goes too, but
+    ``.claude/skills/`` and ``.claude/`` never do — that tree is Claude Code's,
+    and acsdd is only a guest in it.
+    """
+    asset = _lookup(name)
+    target = repo_root / asset.dest
+
+    if not target.exists():
+        return RemoveResult(name=name, path=target, removed=False)
+
+    # remove_paths only ever prunes a file's *immediate* parent, so this takes
+    # the emptied `.claude/skills/<name>/` and stops there.
+    remove_paths([target])
+    return RemoveResult(name=name, path=target, removed=True)
 
 
 def is_installed(name: str, repo_root: Path) -> bool:

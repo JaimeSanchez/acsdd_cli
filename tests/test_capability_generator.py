@@ -227,3 +227,170 @@ def test_capability_generate_doc_stub_resolves_in_catalog_build(tmp_path):
     manifests = {data["capability"]["id"]: data for _, data in iter_manifests(manifests_dir)}
     md = build_catalog_markdown(manifests, docs_root=capabilities_dir, manifests_root=manifests_dir)
     assert "backend/be-001.md" in md
+
+
+# ---------------------------------------------------------------------
+# capability remove — the inverse of generate
+# ---------------------------------------------------------------------
+
+def _generate(runner, tmp_path, cap_id, category="BE"):
+    """generate one capability into tmp_path/.acsdd/capabilities, returning it."""
+    profile_path = tmp_path / "demo-draft.yaml"
+    if not profile_path.exists():
+        _write_profile_yaml(profile_path, SAMPLE_PROFILE)
+    capabilities_dir = tmp_path / ".acsdd" / "capabilities"
+    result = runner.invoke(cli, [
+        "capability", "generate",
+        "--profile", str(profile_path),
+        "--id", cap_id,
+        "--category", category,
+        "--capabilities-dir", str(capabilities_dir),
+    ])
+    assert result.exit_code == 0, result.output
+    return capabilities_dir
+
+
+def test_capability_remove_deletes_manifest_and_doc(tmp_path):
+    runner = CliRunner()
+    capabilities_dir = _generate(runner, tmp_path, "BE-001")
+    manifest_path = capabilities_dir / "_manifests" / "BE-001.yaml"
+    doc_path = capabilities_dir / "backend" / "be-001.md"
+
+    result = runner.invoke(cli, [
+        "capability", "remove", "BE-001",
+        "--capabilities-dir", str(capabilities_dir), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert not manifest_path.exists()
+    assert not doc_path.exists()
+    assert "Removed" in result.output
+
+
+def test_capability_remove_refuses_without_force_and_touches_nothing(tmp_path):
+    runner = CliRunner()
+    capabilities_dir = _generate(runner, tmp_path, "BE-001")
+    manifest_path = capabilities_dir / "_manifests" / "BE-001.yaml"
+    doc_path = capabilities_dir / "backend" / "be-001.md"
+
+    result = runner.invoke(cli, [
+        "capability", "remove", "BE-001", "--capabilities-dir", str(capabilities_dir),
+    ])
+    assert result.exit_code == 1
+    assert "Would remove:" in result.output
+    assert str(manifest_path) in result.output
+    assert str(doc_path) in result.output
+    # The assertion that actually matters: a listing is not a deletion.
+    assert manifest_path.exists()
+    assert doc_path.exists()
+
+
+def test_capability_remove_refuses_when_something_depends_on_it(tmp_path):
+    runner = CliRunner()
+    capabilities_dir = _generate(runner, tmp_path, "BE-001")
+    _generate(runner, tmp_path, "BE-002")
+
+    manifests_dir = capabilities_dir / "_manifests"
+    dependent = yaml.safe_load((manifests_dir / "BE-002.yaml").read_text())
+    dependent["capability"]["name"] = "The Dependent One"
+    dependent["capability"]["dependencies"] = [{"capability": "BE-001", "reason": "needs it"}]
+    (manifests_dir / "BE-002.yaml").write_text(yaml.dump(dependent, sort_keys=False))
+
+    result = runner.invoke(cli, [
+        "capability", "remove", "BE-001",
+        "--capabilities-dir", str(capabilities_dir), "--force",
+    ])
+    assert result.exit_code == 1
+    assert "BE-002" in result.output
+    assert "The Dependent One" in result.output
+    # --force is consent to delete your files, not to break the other manifests.
+    assert (manifests_dir / "BE-001.yaml").exists()
+
+
+def test_capability_remove_rebuilds_the_catalog(tmp_path):
+    runner = CliRunner()
+    capabilities_dir = _generate(runner, tmp_path, "BE-001")
+    _generate(runner, tmp_path, "BE-002")
+    assert runner.invoke(cli, [
+        "catalog", "build", "--capabilities-dir", str(capabilities_dir),
+    ]).exit_code == 0
+    catalog_path = capabilities_dir / "CATALOG.md"
+    assert "BE-001" in catalog_path.read_text()
+
+    result = runner.invoke(cli, [
+        "capability", "remove", "BE-001",
+        "--capabilities-dir", str(capabilities_dir), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert "BE-001" not in catalog_path.read_text()
+    assert "BE-002" in catalog_path.read_text()
+
+    verify = runner.invoke(cli, ["catalog", "verify", "--capabilities-dir", str(capabilities_dir)])
+    assert verify.exit_code == 0, verify.output
+
+
+def test_capability_remove_no_catalog_flag_leaves_it_stale(tmp_path):
+    runner = CliRunner()
+    capabilities_dir = _generate(runner, tmp_path, "BE-001")
+    _generate(runner, tmp_path, "BE-002")
+    runner.invoke(cli, ["catalog", "build", "--capabilities-dir", str(capabilities_dir)])
+
+    result = runner.invoke(cli, [
+        "capability", "remove", "BE-001",
+        "--capabilities-dir", str(capabilities_dir), "--force", "--no-catalog",
+    ])
+    assert result.exit_code == 0, result.output
+    assert "BE-001" in (capabilities_dir / "CATALOG.md").read_text()
+
+
+def test_capability_remove_skips_catalog_when_there_is_none(tmp_path):
+    runner = CliRunner()
+    capabilities_dir = _generate(runner, tmp_path, "BE-001")
+
+    result = runner.invoke(cli, [
+        "capability", "remove", "BE-001",
+        "--capabilities-dir", str(capabilities_dir), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert not (capabilities_dir / "CATALOG.md").exists()
+
+
+def test_capability_remove_keeps_the_manifests_dir_when_the_last_one_goes(tmp_path):
+    # _manifests/ is how resolve_capabilities_dir recognizes the tree at all.
+    runner = CliRunner()
+    capabilities_dir = _generate(runner, tmp_path, "BE-001")
+
+    result = runner.invoke(cli, [
+        "capability", "remove", "BE-001",
+        "--capabilities-dir", str(capabilities_dir), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert (capabilities_dir / "_manifests").is_dir()
+    # The emptied category dir, though, is cleaned up.
+    assert not (capabilities_dir / "backend").exists()
+
+
+def test_capability_remove_finds_a_renamed_doc_by_content(tmp_path):
+    runner = CliRunner()
+    capabilities_dir = _generate(runner, tmp_path, "BE-001")
+    original = capabilities_dir / "backend" / "be-001.md"
+    renamed = capabilities_dir / "backend" / "how-we-do-the-thing.md"
+    original.rename(renamed)
+
+    result = runner.invoke(cli, [
+        "capability", "remove", "BE-001",
+        "--capabilities-dir", str(capabilities_dir), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert not renamed.exists()
+
+
+def test_capability_remove_unknown_id_exits_1(tmp_path):
+    runner = CliRunner()
+    capabilities_dir = _generate(runner, tmp_path, "BE-001")
+
+    result = runner.invoke(cli, [
+        "capability", "remove", "BE-999",
+        "--capabilities-dir", str(capabilities_dir), "--force",
+    ])
+    assert result.exit_code == 1
+    assert "BE-999" in result.output
