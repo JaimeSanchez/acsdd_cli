@@ -1,6 +1,6 @@
 # DB-004: Create Doctrine Migration
 
-**Manifest:** `capabilities/_manifests/DB-004.yaml`
+**Manifest:** `_manifests/DB-004.yaml`
 **Adapter:** `DB-004-PHP-SYM44-MYSQL8` (Symfony 4.4, Doctrine ORM, MySQL 8.0)
 **Depends on:** DB-001 (entity inventory)
 

@@ -264,7 +264,7 @@ CLEAN_YAML = DRAFT_YAML.replace(
 
 
 def _write_draft(tmp_path, body=DRAFT_YAML, name="cli-test-draft.yaml"):
-    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
     profiles_dir.mkdir(parents=True, exist_ok=True)
     path = profiles_dir / name
     path.write_text(body, encoding="utf-8")

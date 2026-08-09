@@ -149,7 +149,7 @@ def test_profile_create_refuses_overwrite_without_force(tmp_path):
 
 def test_profile_create_auto_detects_single_draft(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
     profiles_dir.mkdir(parents=True)
     (profiles_dir / "test-profile-draft.yaml").write_text(VALID_CLEAN_DRAFT_YAML)
 
@@ -170,7 +170,7 @@ def test_profile_create_errors_when_no_draft_found(monkeypatch, tmp_path):
 
 def test_profile_create_ignores_finalized_profile_when_auto_detecting_draft(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
     profiles_dir.mkdir(parents=True)
     (profiles_dir / "test-profile-draft.yaml").write_text(VALID_CLEAN_DRAFT_YAML)
     (profiles_dir / "test-profile.yaml").write_text(VALID_CLEAN_DRAFT_YAML.replace('"draft"', '"active"'))
@@ -183,7 +183,7 @@ def test_profile_create_ignores_finalized_profile_when_auto_detecting_draft(monk
 
 def test_profile_validate_auto_detects_profile(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
     profiles_dir.mkdir(parents=True)
     (profiles_dir / "test-profile-draft.yaml").write_text(VALID_DRAFT_YAML)
 

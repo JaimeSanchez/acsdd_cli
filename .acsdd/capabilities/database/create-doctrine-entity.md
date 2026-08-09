@@ -1,6 +1,6 @@
 # DB-002: Create Doctrine Entity
 
-**Manifest:** `capabilities/_manifests/DB-002.yaml`
+**Manifest:** `_manifests/DB-002.yaml`
 **Adapter:** `DB-002-PHP-SYM44-MYSQL8` (Symfony 4.4, Doctrine ORM, MySQL 8.0)
 **Depends on:** DB-001 (entity inventory)
 

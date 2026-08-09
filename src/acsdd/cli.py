@@ -22,6 +22,13 @@ from acsdd.capability.generator import scaffold_manifest
 from acsdd.capability.loader import iter_manifests, ManifestLoadError
 from acsdd.capability.validator import validate_manifest, validate_catalog
 from acsdd.catalog.builder import build_catalog_markdown, CATEGORY_ORDER, CATEGORY_DOC_DIR
+from acsdd.paths import (
+    ACSDD_DIR,
+    DEFAULT_PROFILES_DIR,
+    MANIFESTS_SUBDIR,
+    resolve_capabilities_dir,
+    resolve_profiles_dir,
+)
 from acsdd.profile.generator import find_unresolved_fields, finalize_profile
 from acsdd.profile.validator import validate_profile_file
 from acsdd.skills import (
@@ -33,26 +40,67 @@ from acsdd.skills import (
 )
 
 
+_warned_legacy: set = set()
+
+
+def _warn_legacy_layout(path: Path):
+    """One-line nudge when a path resolved to the pre-.acsdd layout.
+
+    Goes to stderr and fires at most once per kind per process: `--json`
+    consumers read stdout, and a per-command banner would be noise on every
+    invocation in a repo that hasn't renamed yet.
+    """
+    kind = path.name
+    if kind in _warned_legacy:
+        return
+    _warned_legacy.add(kind)
+
+    try:
+        shown = path.relative_to(Path.cwd())
+    except ValueError:
+        shown = path
+
+    click.secho(
+        f"NOTE: using legacy '{shown}' — acsdd now keeps everything under "
+        # Plain `mv`, not `git mv`: the latter fails outright when the
+        # directory holds nothing git is tracking yet, and git detects the
+        # rename from content at commit time either way.
+        f"'{ACSDD_DIR}/'. Move it with: "
+        f"mkdir -p {ACSDD_DIR} && mv {shown} {ACSDD_DIR}/{kind}",
+        fg="yellow",
+        err=True,
+    )
+
+
 def _default_capabilities_dir() -> Path:
-    """Walk up from cwd looking for a capabilities/_manifests dir, falling
-    back to ./capabilities. Keeps the CLI usable from any subdirectory of
-    a project that has adopted the ACSDD capabilities/ layout."""
-    cwd = Path.cwd()
-    for candidate in [cwd, *cwd.parents]:
-        if (candidate / "capabilities" / "_manifests").is_dir():
-            return candidate / "capabilities"
-    return cwd / "capabilities"
+    """Walk up from cwd looking for a capabilities tree, falling back to
+    ./.acsdd/capabilities. Keeps the CLI usable from any subdirectory of a
+    project that has adopted the ACSDD layout. See acsdd.paths."""
+    capabilities_dir, is_legacy = resolve_capabilities_dir(Path.cwd())
+    if is_legacy:
+        _warn_legacy_layout(capabilities_dir)
+    return capabilities_dir
+
+
+def _profiles_dir() -> Optional[Path]:
+    """The repo's profiles directory, or None if it has none yet."""
+    profiles_dir, is_legacy = resolve_profiles_dir(Path.cwd())
+    if not profiles_dir.is_dir():
+        return None
+    if is_legacy:
+        _warn_legacy_layout(profiles_dir)
+    return profiles_dir
 
 
 def _default_profile_path() -> Optional[Path]:
-    """Looks for a single profile YAML under ./acsdd/profiles — the default
+    """Looks for a single profile YAML under ./.acsdd/profiles — the default
     output location `profile discover`/`profile create` already write to —
     so a repo that's been onboarded doesn't need --profile spelled out by
     hand. Prefers a finalized profile (<id>.yaml) over a draft
     (<id>-draft.yaml); returns None (rather than guessing) whenever there's
     more than one plausible candidate."""
-    profiles_dir = Path.cwd() / "acsdd" / "profiles"
-    if not profiles_dir.is_dir():
+    profiles_dir = _profiles_dir()
+    if profiles_dir is None:
         return None
 
     candidates = sorted(profiles_dir.glob("*.yaml"))
@@ -67,10 +115,10 @@ def _default_profile_path() -> Optional[Path]:
 def _default_draft_profile_path() -> Optional[Path]:
     """Same idea as _default_profile_path, but for `profile create --draft`
     specifically: it consumes a *draft*, so this only ever looks at
-    <id>-draft.yaml files under ./acsdd/profiles, ignoring any already-
+    <id>-draft.yaml files under ./.acsdd/profiles, ignoring any already-
     finalized profile that might also be sitting there."""
-    profiles_dir = Path.cwd() / "acsdd" / "profiles"
-    if not profiles_dir.is_dir():
+    profiles_dir = _profiles_dir()
+    if profiles_dir is None:
         return None
 
     drafts = sorted(profiles_dir.glob("*-draft.yaml"))
@@ -111,12 +159,12 @@ class OnboardingStatus:
 
 
 def _onboarding_status() -> OnboardingStatus:
-    profiles_dir = Path.cwd() / "acsdd" / "profiles"
-    profile_candidates = sorted(profiles_dir.glob("*.yaml")) if profiles_dir.is_dir() else []
+    profiles_dir = _profiles_dir()
+    profile_candidates = sorted(profiles_dir.glob("*.yaml")) if profiles_dir else []
     has_finalized_profile = any(not p.name.endswith("-draft.yaml") for p in profile_candidates)
 
     capabilities_dir = _default_capabilities_dir()
-    manifests_dir = capabilities_dir / "_manifests"
+    manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
     has_manifests = manifests_dir.is_dir() and any(manifests_dir.glob("*.yaml"))
     has_catalog = (capabilities_dir / "CATALOG.md").exists()
 
@@ -163,6 +211,10 @@ def _print_welcome(status: OnboardingStatus):
 @click.pass_context
 def cli(ctx: click.Context):
     """ACSDD — AI-Collaborative Software Development & Delivery CLI."""
+    # Scoped to the invocation, not the interpreter: a real run is one command
+    # per process, but the test suite drives many through a single one.
+    _warned_legacy.clear()
+
     if ctx.invoked_subcommand is not None:
         return
     status = _onboarding_status()
@@ -221,11 +273,11 @@ def _load_all(manifests_dir: Path) -> tuple[Dict[str, Dict], list[str]]:
 @capability.command("validate")
 @click.argument("path", type=click.Path(exists=True, path_type=Path), required=False)
 @click.option("--manifests-dir", type=click.Path(path_type=Path), default=None,
-              help="Directory of manifests (default: auto-detected capabilities/_manifests).")
+              help="Directory of manifests (default: auto-detected .acsdd/capabilities/_manifests).")
 def capability_validate(path: Optional[Path], manifests_dir: Optional[Path]):
     """Validate one manifest (PATH) or every manifest in --manifests-dir
     against the Appendix A schema, plus cross-manifest dependency checks."""
-    manifests_dir = manifests_dir or _default_capabilities_dir() / "_manifests"
+    manifests_dir = manifests_dir or _default_capabilities_dir() / MANIFESTS_SUBDIR
 
     if path:
         from acsdd.capability.loader import load_manifest
@@ -277,7 +329,7 @@ def capability_validate(path: Optional[Path], manifests_dir: Optional[Path]):
 @click.option("--category", default=None, help="Filter by category, e.g. DB.")
 def capability_list(manifests_dir: Optional[Path], category: Optional[str]):
     """List every capability manifest found, sorted by ID."""
-    manifests_dir = manifests_dir or _default_capabilities_dir() / "_manifests"
+    manifests_dir = manifests_dir or _default_capabilities_dir() / MANIFESTS_SUBDIR
     manifests, load_errors = _load_all(manifests_dir)
     for err in load_errors:
         click.secho(f"WARN  {err}", fg="yellow")
@@ -309,7 +361,7 @@ def capability_list(manifests_dir: Optional[Path], category: Optional[str]):
 def capability_show(capability_id: str, manifests_dir: Optional[Path]):
     """Print the full manifest for one capability ID, plus its resolved
     dependency chain."""
-    manifests_dir = manifests_dir or _default_capabilities_dir() / "_manifests"
+    manifests_dir = manifests_dir or _default_capabilities_dir() / MANIFESTS_SUBDIR
     manifests, _ = _load_all(manifests_dir)
 
     if capability_id not in manifests:
@@ -341,12 +393,12 @@ _CAP_ID_PATTERN = r"^[A-Z]{2,4}-[0-9]{3}$"
 
 @capability.command("generate")
 @click.option("--profile", "profile_path", type=click.Path(exists=True, path_type=Path), default=None,
-              help="Path to a profile YAML (default: auto-detected single profile under ./acsdd/profiles).")
+              help="Path to a profile YAML (default: auto-detected single profile under ./.acsdd/profiles).")
 @click.option("--id", "cap_id", required=True, help="Capability id, e.g. BE-005.")
 @click.option("--category", required=True, type=click.Choice(CATEGORY_ORDER))
 @click.option("--name", default=None, help="Human-readable name (optional; left as a placeholder if omitted).")
 @click.option("--capabilities-dir", type=click.Path(path_type=Path), default=None,
-              help="Root capabilities/ directory (default: auto-detected, created if missing).")
+              help="Root capabilities directory (default: auto-detected under .acsdd/, created if missing).")
 @click.option("--force", is_flag=True, default=False,
               help="Overwrite an existing manifest and/or procedure-doc stub.")
 def capability_generate(profile_path: Optional[Path], cap_id: str, category: str, name: Optional[str],
@@ -366,7 +418,7 @@ def capability_generate(profile_path: Optional[Path], cap_id: str, category: str
         profile_path = _default_profile_path()
         if profile_path is None:
             click.secho(
-                "ERROR: no --profile given and couldn't auto-detect one under ./acsdd/profiles.",
+                "ERROR: no --profile given and couldn't auto-detect one under ./.acsdd/profiles.",
                 fg="red",
             )
             click.echo("Run `acsdd profile discover .` first, or pass --profile explicitly.")
@@ -378,7 +430,7 @@ def capability_generate(profile_path: Optional[Path], cap_id: str, category: str
     profile = profile_doc.get("profile", {}) or {}
 
     capabilities_dir = capabilities_dir or _default_capabilities_dir()
-    manifests_dir = capabilities_dir / "_manifests"
+    manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
     manifests_dir.mkdir(parents=True, exist_ok=True)
 
     manifest_path = manifests_dir / f"{cap_id}.yaml"
@@ -436,14 +488,14 @@ def catalog():
 
 @catalog.command("build")
 @click.option("--capabilities-dir", type=click.Path(path_type=Path), default=None,
-              help="Root capabilities/ directory (default: auto-detected).")
+              help="Root capabilities directory (default: auto-detected).")
 @click.option("--out", type=click.Path(path_type=Path), default=None,
               help="Output path (default: <capabilities-dir>/CATALOG.md).")
 def catalog_build(capabilities_dir: Optional[Path], out: Optional[Path]):
     """Regenerate CATALOG.md from the manifests in _manifests/. This file
     is generated — don't hand-edit it, since a rebuild will overwrite it."""
     capabilities_dir = capabilities_dir or _default_capabilities_dir()
-    manifests_dir = capabilities_dir / "_manifests"
+    manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
     out = out or capabilities_dir / "CATALOG.md"
 
     manifests, load_errors = _load_all(manifests_dir)
@@ -461,7 +513,7 @@ def catalog_verify(capabilities_dir: Optional[Path]):
     """Fail if CATALOG.md is stale relative to the manifests, or if any
     manifest fails schema/cross-manifest validation. Intended for CI."""
     capabilities_dir = capabilities_dir or _default_capabilities_dir()
-    manifests_dir = capabilities_dir / "_manifests"
+    manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
     catalog_path = capabilities_dir / "CATALOG.md"
 
     manifests, load_errors = _load_all(manifests_dir)
@@ -527,7 +579,7 @@ def profile():
 @click.option("--depth", default="deep", type=click.Choice(["surface", "deep"]))
 @click.option("--known-stack", default=None)
 @click.option("--target-version", default="0.2.0")
-@click.option("--output", default="./acsdd/profiles")
+@click.option("--output", default=DEFAULT_PROFILES_DIR)
 @click.option("--force", is_flag=True, default=False,
               help="Overwrite existing draft/report/recommendations files")
 def profile_discover(repo_path, profile_id, depth, known_stack, target_version, output, force):
@@ -551,7 +603,7 @@ def profile_discover(repo_path, profile_id, depth, known_stack, target_version, 
 @profile.command("create")
 @click.option("--draft", "draft_path", type=click.Path(exists=True, path_type=Path), default=None,
               help="Path to a reviewed draft profile YAML (default: auto-detected single "
-                   "*-draft.yaml under ./acsdd/profiles).")
+                   "*-draft.yaml under ./.acsdd/profiles).")
 @click.option("--output", type=click.Path(path_type=Path), default=None,
               help="Output path (default: alongside --draft, named <profile-id>.yaml).")
 @click.option("--force", is_flag=True, default=False, help="Overwrite an existing output file.")
@@ -566,7 +618,7 @@ def profile_create(draft_path: Optional[Path], output: Optional[Path], force: bo
         draft_path = _default_draft_profile_path()
         if draft_path is None:
             click.secho(
-                "ERROR: no --draft given and couldn't auto-detect one under ./acsdd/profiles.",
+                "ERROR: no --draft given and couldn't auto-detect one under ./.acsdd/profiles.",
                 fg="red",
             )
             click.echo("Run `acsdd profile discover .` first, or pass --draft explicitly.")
@@ -619,13 +671,13 @@ def profile_validate(profile_path: Optional[Path], strict: bool):
     """Validate a Profile YAML file against the Appendix B schema.
 
     PROFILE_PATH is optional — omit it and acsdd auto-detects a single
-    profile under ./acsdd/profiles, same as `capability generate`.
+    profile under ./.acsdd/profiles, same as `capability generate`.
     """
     if profile_path is None:
         profile_path = _default_profile_path()
         if profile_path is None:
             click.secho(
-                "ERROR: no PROFILE_PATH given and couldn't auto-detect one under ./acsdd/profiles.",
+                "ERROR: no PROFILE_PATH given and couldn't auto-detect one under ./.acsdd/profiles.",
                 fg="red",
             )
             click.echo("Run `acsdd profile discover .` first, or pass PROFILE_PATH explicitly.")
@@ -683,7 +735,7 @@ def profile_review(profile_path: Optional[Path], as_json: bool, repo_path: Path)
         profile_path = _default_review_profile_path()
         if profile_path is None:
             click.secho(
-                "ERROR: no PROFILE_PATH given and couldn't auto-detect one under ./acsdd/profiles.",
+                "ERROR: no PROFILE_PATH given and couldn't auto-detect one under ./.acsdd/profiles.",
                 fg="red",
             )
             click.echo("Run `acsdd profile discover .` first, or pass PROFILE_PATH explicitly.")

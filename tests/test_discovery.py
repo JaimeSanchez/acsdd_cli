@@ -370,3 +370,19 @@ def test_health_metrics_parses_clover_xml(tmp_path):
     )
     metrics = HealthMetrics(tmp_path).analyze()
     assert metrics["coverage"] == pytest.approx(75.0)
+
+
+def test_profile_discover_writes_under_dot_acsdd_by_default(monkeypatch, tmp_path):
+    # No --output: everything acsdd writes into a repo goes under .acsdd/,
+    # and a legacy ./acsdd/ sitting there is never written into again.
+    _build_symfony_ddd_fixture(tmp_path)
+    (tmp_path / "acsdd" / "profiles").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(cli, [
+        "profile", "discover", ".", "--profile-id", "layout-test", "--depth", "surface",
+    ])
+
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / ".acsdd" / "profiles" / "layout-test-draft.yaml").exists()
+    assert not list((tmp_path / "acsdd" / "profiles").iterdir())

@@ -23,6 +23,8 @@ from datetime import datetime
 from collections import Counter
 from typing import Dict, List, Optional, Tuple
 
+from acsdd.paths import DEFAULT_PROFILES_DIR
+
 try:
     import tomllib  # stdlib, Python 3.11+
 except ImportError:  # pragma: no cover - fallback for older interpreters
@@ -1261,7 +1263,7 @@ def main(argv=None):
     parser.add_argument("--depth", default="deep", choices=["surface", "deep"])
     parser.add_argument("--known-stack", default=None, help="Skip auto-detection")
     parser.add_argument("--target-version", default="0.2.0", help="ACSDD target version")
-    parser.add_argument("--output", default="./acsdd/profiles", help="Output directory")
+    parser.add_argument("--output", default=DEFAULT_PROFILES_DIR, help="Output directory")
     parser.add_argument("--force", action="store_true",
                          help="Overwrite existing draft/report/recommendations files")
 
