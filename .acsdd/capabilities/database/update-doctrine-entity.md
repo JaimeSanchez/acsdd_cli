@@ -1,6 +1,6 @@
 # DB-003: Update Doctrine Entity
 
-**Manifest:** `capabilities/_manifests/DB-003.yaml`
+**Manifest:** `_manifests/DB-003.yaml`
 **Adapter:** `DB-003-PHP-SYM44-MYSQL8` (Symfony 4.4, Doctrine ORM, MySQL 8.0)
 **Depends on:** DB-001 (entity inventory)
 

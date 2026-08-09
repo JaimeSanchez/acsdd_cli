@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Delivery) framework: capability manifests, a generated capability catalog,
 and repository engineering profiles. The repo ships both the tool
 (`src/acsdd/`) and a working example of the data it operates on
-(`capabilities/` — four real capabilities, `DB-001`..`DB-004`, for a
+(`.acsdd/capabilities/` — four real capabilities, `DB-001`..`DB-004`, for a
 Symfony 4.4 / Doctrine / MySQL 8 stack) so every command can be run
 immediately against something real.
 
@@ -32,14 +32,14 @@ acsdd profile discover /path/to/repo   # --profile-id defaults to the dir name (
 
 # Onboarding a brand-new repo: discover its profile, review + finalize it,
 # then scaffold a draft capability manifest from it (auto-creates
-# capabilities/_manifests/ if missing) — the workflow this tool is
+# .acsdd/capabilities/_manifests/ if missing) — the workflow this tool is
 # designed around.
 acsdd profile discover /path/to/my-project
 acsdd profile review    # what's still [REVIEW REQUIRED], and how to resolve it
 # ...fill in those fields in the draft, then:
 # (both --draft below and --profile further down default to whatever's
-# under ./acsdd/profiles — spelled out here only for clarity)
-acsdd profile create --draft acsdd/profiles/my-project-draft.yaml
+# under ./.acsdd/profiles — spelled out here only for clarity)
+acsdd profile create --draft .acsdd/profiles/my-project-draft.yaml
 acsdd capability generate --id BE-001 --category BE
 
 # Install the packaged Claude Code skill that automates the review step
@@ -67,15 +67,29 @@ manifests directory, call into the matching non-CLI module below, and format
 output. Keep business logic out of `cli.py`; put it in the module it belongs
 to so it stays testable without invoking Click.
 
-Manifests directory resolution (`_default_capabilities_dir` in `cli.py`)
-walks up from `cwd` looking for `capabilities/_manifests`, so the CLI works
-from any subdirectory of a project that has adopted the ACSDD layout — don't
-hardcode `./capabilities` elsewhere.
+**`paths.py`** — the single authority on where acsdd's artifacts live inside
+a consumer repo. Everything it writes goes under one hidden `.acsdd/` root
+(`.acsdd/profiles/`, `.acsdd/capabilities/`); the sole exception is
+`.claude/skills/`, which is Claude Code's convention and stays put (see
+`skills.py`). `resolve_profiles_dir` / `resolve_capabilities_dir` each return
+`(dir, is_legacy)`, falling back to the pre-`.acsdd` locations (`acsdd/profiles`,
+top-level `capabilities/`) so a repo onboarded before the move keeps working —
+but nothing ever *writes* to a legacy path again. **Don't spell either layout
+out anywhere else**; call a resolver. `resolve_capabilities_dir` checks both
+candidates at *each* level of its walk-up before ascending — two sequential
+per-layout walks would let a distant ancestor's `.acsdd/capabilities` beat the
+legacy `capabilities/` of the repo you're standing in.
+
+`cli.py`'s `_default_capabilities_dir` / `_profiles_dir` wrap those resolvers
+and emit the legacy nudge via `_warn_legacy_layout` — stderr only (stdout
+carries `profile review --json`), once per kind per invocation, reset in the
+`cli` group callback rather than per-process so the test suite sees each
+invocation fresh.
 
 Profile auto-detection (`_default_profile_path` in `cli.py`, used by
 `capability generate` and `profile validate` when their path argument is
-omitted) only looks in `./acsdd/profiles` — cwd-relative, no walk-up —
-matching `profile discover`'s own `--output` default exactly. It prefers a
+omitted) is cwd-relative with no walk-up, matching `profile discover`'s own
+`--output` default (`paths.DEFAULT_PROFILES_DIR`) exactly. It prefers a
 finalized profile (`<id>.yaml`) over a draft (`<id>-draft.yaml`), and
 deliberately returns `None` (forcing an explicit path) rather than guessing
 whenever more than one plausible candidate exists. `_default_draft_profile_path`
@@ -107,7 +121,7 @@ command, since a finalized profile by definition has nothing left to review.
   an enforced link.
 
 **`catalog/builder.py`** — `build_catalog_markdown` regenerates
-`capabilities/CATALOG.md` purely from the manifest dicts (grouped by a
+`.acsdd/capabilities/CATALOG.md` purely from the manifest dicts (grouped by a
 fixed `CATEGORY_ORDER`, with a rendered dependency graph and best-effort
 procedure-doc links via `_doc_link`, which greps category doc folders for a
 matching capability id). **`CATALOG.md` is a generated file** — `acsdd
@@ -210,7 +224,7 @@ desync before publish.
    arm64, macOS Apple Silicon/arm64 only — Intel macOS was dropped after
    GitHub's hosted `macos-13` runner sat queued indefinitely and blocked the
    whole release, since the publish job needs every matrix leg to finish;
-   each binary is smoke-tested against `capabilities/` before upload,
+   each binary is smoke-tested against `.acsdd/capabilities/` before upload,
    checksummed).
 
 If you change how the CLI locates data files (schemas, assets, or anything
@@ -255,14 +269,14 @@ the latest GitHub release.
 
 Tests live in `tests/`, generally one file per package (`test_capability.py`,
 `test_profile.py`, `test_discovery.py`, `test_capability_generator.py`,
-`test_profile_generator.py`, `test_profile_review.py`, `test_skills.py`,
-`test_update.py`), plain `pytest` functions (no
+`test_profile_generator.py`, `test_profile_review.py`, `test_paths.py`,
+`test_skills.py`, `test_update.py`), plain `pytest` functions (no
 test classes). `test_update.py` monkeypatches `is_frozen_binary`/
 `detect_platform`/`_download` rather than hitting the network or a real
 binary — keep that pattern for any future changes there. A
 `real_manifests_dir` fixture
 (see `tests/test_capability.py`) points at the actual
-`capabilities/_manifests/` example data — several tests validate against
+`.acsdd/capabilities/_manifests/` example data — several tests validate against
 that real data directly rather than only synthetic fixtures, so changes to
 the example capabilities can break tests even if the tool code is untouched.
 

@@ -64,9 +64,9 @@ jobs:
         run: |
           chmod +x dist/acsdd-${{ matrix.target }}
           ./dist/acsdd-${{ matrix.target }} --version
-          ./dist/acsdd-${{ matrix.target }} capability list --manifests-dir capabilities/_manifests
-          ./dist/acsdd-${{ matrix.target }} capability validate --manifests-dir capabilities/_manifests
-          ./dist/acsdd-${{ matrix.target }} catalog verify --capabilities-dir capabilities
+          ./dist/acsdd-${{ matrix.target }} capability list --manifests-dir .acsdd/capabilities/_manifests
+          ./dist/acsdd-${{ matrix.target }} capability validate --manifests-dir .acsdd/capabilities/_manifests
+          ./dist/acsdd-${{ matrix.target }} catalog verify --capabilities-dir .acsdd/capabilities
           # pytest only ever exercises the source install, so this is the only
           # place the packaged skill asset's importlib.resources path is proven
           # to survive freezing. If acsdd.spec's `datas` list falls out of sync

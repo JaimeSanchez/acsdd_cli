@@ -70,26 +70,26 @@ def test_scaffold_manifest_skips_unresolved_review_required_fields():
 
 def test_capability_generate_auto_detects_finalized_profile(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
     profiles_dir.mkdir(parents=True)
     _write_profile_yaml(profiles_dir / "demo.yaml", SAMPLE_PROFILE)
 
     runner = CliRunner()
     result = runner.invoke(cli, [
         "capability", "generate", "--id", "BE-001", "--category", "BE",
-        "--capabilities-dir", str(tmp_path / "capabilities"),
+        "--capabilities-dir", str(tmp_path / ".acsdd" / "capabilities"),
     ])
     assert result.exit_code == 0, result.output
     assert "No --profile given, using:" in result.output
     assert str(profiles_dir / "demo.yaml") in result.output
 
-    manifest = yaml.safe_load((tmp_path / "capabilities" / "_manifests" / "BE-001.yaml").read_text())
+    manifest = yaml.safe_load((tmp_path / ".acsdd" / "capabilities" / "_manifests" / "BE-001.yaml").read_text())
     assert manifest["capability"]["adapters"][0]["stack"] == "php-symfony-doctrine"
 
 
 def test_capability_generate_prefers_finalized_over_draft(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
     profiles_dir.mkdir(parents=True)
     draft_profile = {**SAMPLE_PROFILE, "capability_configuration": {"default_adapter": "draft-adapter"}}
     _write_profile_yaml(profiles_dir / "demo-draft.yaml", draft_profile)
@@ -98,24 +98,24 @@ def test_capability_generate_prefers_finalized_over_draft(monkeypatch, tmp_path)
     runner = CliRunner()
     result = runner.invoke(cli, [
         "capability", "generate", "--id", "BE-001", "--category", "BE",
-        "--capabilities-dir", str(tmp_path / "capabilities"),
+        "--capabilities-dir", str(tmp_path / ".acsdd" / "capabilities"),
     ])
     assert result.exit_code == 0, result.output
 
-    manifest = yaml.safe_load((tmp_path / "capabilities" / "_manifests" / "BE-001.yaml").read_text())
+    manifest = yaml.safe_load((tmp_path / ".acsdd" / "capabilities" / "_manifests" / "BE-001.yaml").read_text())
     assert manifest["capability"]["adapters"][0]["stack"] == "php-symfony-doctrine"
 
 
 def test_capability_generate_falls_back_to_only_draft(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
     profiles_dir.mkdir(parents=True)
     _write_profile_yaml(profiles_dir / "demo-draft.yaml", SAMPLE_PROFILE)
 
     runner = CliRunner()
     result = runner.invoke(cli, [
         "capability", "generate", "--id", "BE-001", "--category", "BE",
-        "--capabilities-dir", str(tmp_path / "capabilities"),
+        "--capabilities-dir", str(tmp_path / ".acsdd" / "capabilities"),
     ])
     assert result.exit_code == 0, result.output
 
@@ -125,7 +125,7 @@ def test_capability_generate_errors_when_no_profiles_dir(monkeypatch, tmp_path):
     runner = CliRunner()
     result = runner.invoke(cli, [
         "capability", "generate", "--id", "BE-001", "--category", "BE",
-        "--capabilities-dir", str(tmp_path / "capabilities"),
+        "--capabilities-dir", str(tmp_path / ".acsdd" / "capabilities"),
     ])
     assert result.exit_code != 0
     assert "profile discover" in result.output
@@ -133,7 +133,7 @@ def test_capability_generate_errors_when_no_profiles_dir(monkeypatch, tmp_path):
 
 def test_capability_generate_errors_when_ambiguous_profiles(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    profiles_dir = tmp_path / "acsdd" / "profiles"
+    profiles_dir = tmp_path / ".acsdd" / "profiles"
     profiles_dir.mkdir(parents=True)
     _write_profile_yaml(profiles_dir / "one.yaml", SAMPLE_PROFILE)
     _write_profile_yaml(profiles_dir / "two.yaml", SAMPLE_PROFILE)
@@ -141,7 +141,7 @@ def test_capability_generate_errors_when_ambiguous_profiles(monkeypatch, tmp_pat
     runner = CliRunner()
     result = runner.invoke(cli, [
         "capability", "generate", "--id", "BE-001", "--category", "BE",
-        "--capabilities-dir", str(tmp_path / "capabilities"),
+        "--capabilities-dir", str(tmp_path / ".acsdd" / "capabilities"),
     ])
     assert result.exit_code != 0
 
@@ -149,7 +149,7 @@ def test_capability_generate_errors_when_ambiguous_profiles(monkeypatch, tmp_pat
 def test_capability_generate_creates_manifest_and_doc(tmp_path):
     profile_path = tmp_path / "demo-draft.yaml"
     _write_profile_yaml(profile_path, SAMPLE_PROFILE)
-    capabilities_dir = tmp_path / "capabilities"
+    capabilities_dir = tmp_path / ".acsdd" / "capabilities"
 
     runner = CliRunner()
     result = runner.invoke(cli, [
@@ -171,7 +171,7 @@ def test_capability_generate_creates_manifest_and_doc(tmp_path):
 def test_capability_generate_refuses_overwrite_without_force(tmp_path):
     profile_path = tmp_path / "demo-draft.yaml"
     _write_profile_yaml(profile_path, SAMPLE_PROFILE)
-    capabilities_dir = tmp_path / "capabilities"
+    capabilities_dir = tmp_path / ".acsdd" / "capabilities"
     runner = CliRunner()
     argv = [
         "capability", "generate",
@@ -201,7 +201,7 @@ def test_capability_generate_rejects_invalid_id(tmp_path):
         "--profile", str(profile_path),
         "--id", "not-a-valid-id",
         "--category", "BE",
-        "--capabilities-dir", str(tmp_path / "capabilities"),
+        "--capabilities-dir", str(tmp_path / ".acsdd" / "capabilities"),
     ])
     assert result.exit_code != 0
 
@@ -212,7 +212,7 @@ def test_capability_generate_doc_stub_resolves_in_catalog_build(tmp_path):
 
     profile_path = tmp_path / "demo-draft.yaml"
     _write_profile_yaml(profile_path, SAMPLE_PROFILE)
-    capabilities_dir = tmp_path / "capabilities"
+    capabilities_dir = tmp_path / ".acsdd" / "capabilities"
     runner = CliRunner()
     result = runner.invoke(cli, [
         "capability", "generate",

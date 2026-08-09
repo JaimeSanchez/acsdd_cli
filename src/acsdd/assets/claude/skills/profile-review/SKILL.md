@@ -1,6 +1,6 @@
 ---
 name: profile-review
-description: Resolve the [REVIEW REQUIRED] placeholders in an acsdd draft engineering profile. Use when a repo has an acsdd/profiles/*-draft.yaml with unresolved fields, when `acsdd profile create` refuses to finalize, or when the user asks to finish, complete, or finalize their ACSDD profile.
+description: Resolve the [REVIEW REQUIRED] placeholders in an acsdd draft engineering profile. Use when a repo has an .acsdd/profiles/*-draft.yaml with unresolved fields, when `acsdd profile create` refuses to finalize, or when the user asks to finish, complete, or finalize their ACSDD profile.
 ---
 
 # Resolving an ACSDD draft profile
@@ -21,7 +21,7 @@ changes.
 
 ```bash
 acsdd --version
-ls acsdd/profiles/*-draft.yaml
+ls .acsdd/profiles/*-draft.yaml acsdd/profiles/*-draft.yaml 2>/dev/null
 ```
 
 If `acsdd` is not on PATH, stop and tell the user how to install it
@@ -42,7 +42,9 @@ for what counts as unresolved; the same function backs `profile validate
 didn't report is not actually blocking, and anything it reported that you skip
 will block finalization later.
 
-The payload gives you, per field: `path`, the literal `placeholder`,
+The payload's top-level `profile_path` is the draft acsdd resolved — use that
+string wherever a later step needs the file, rather than reconstructing a path
+yourself. Per field it gives you: `path`, the literal `placeholder`,
 `what` the field means, `detection_attempted` (what discovery tried and why it
 missed), `evidence` hints each marked `found: true|false|null`,
 `allowed_values` / `examples`, `resolution`, and `linked_fields`.
@@ -96,7 +98,8 @@ round-trip it through a YAML dumper.
 ## 6. Verify
 
 ```bash
-acsdd profile validate acsdd/profiles/<id>-draft.yaml --strict
+# $PROFILE = the `profile_path` from step 2's JSON payload
+acsdd profile validate "$PROFILE" --strict
 ```
 
 If it still fails, re-run `acsdd profile review --json` and work the remaining

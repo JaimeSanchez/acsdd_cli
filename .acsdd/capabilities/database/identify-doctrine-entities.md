@@ -1,6 +1,6 @@
 # DB-001: Identify Doctrine Entities
 
-**Manifest:** `capabilities/_manifests/DB-001.yaml`
+**Manifest:** `_manifests/DB-001.yaml`
 **Adapter:** `DB-001-PHP-SYM44-MYSQL8` (Symfony 4.4, Doctrine ORM, MySQL 8.0)
 **Depended on by:** DB-002, DB-003, DB-004
 

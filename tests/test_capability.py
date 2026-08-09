@@ -30,7 +30,7 @@ VALID_MANIFEST = textwrap.dedent("""
 
 @pytest.fixture
 def real_manifests_dir():
-    return Path(__file__).parent.parent / "capabilities" / "_manifests"
+    return Path(__file__).parent.parent / ".acsdd" / "capabilities" / "_manifests"
 
 
 def test_load_manifest(tmp_path):

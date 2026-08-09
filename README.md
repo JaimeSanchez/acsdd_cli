@@ -5,7 +5,7 @@ Development & Delivery) framework: capability manifests, the capability
 catalog, and repository engineering profiles.
 
 This package ships both the **tool** (`src/acsdd/`) and a working example
-of the **data it operates on** (`capabilities/`) — four real capabilities
+of the **data it operates on** (`.acsdd/capabilities/`) — four real capabilities
 (`DB-001`..`DB-004`, Symfony 4.4 / Doctrine / MySQL 8) so every command
 below can be run immediately against something real.
 
@@ -53,6 +53,36 @@ pip install -e ".[dev]"
 
 Requires Python 3.10+. Installs the `acsdd` command on your PATH.
 
+## What acsdd writes into your repo
+
+Everything lives under a single `.acsdd/` directory:
+
+```
+your-repo/
+├── .acsdd/
+│   ├── profiles/           # engineering profile (draft + finalized), discovery report
+│   └── capabilities/       # capability manifests, CATALOG.md, procedure docs
+└── .claude/skills/         # only if you run `acsdd skill install`
+```
+
+`.claude/` is deliberately outside it — that path is
+[Claude Code](https://claude.com/claude-code)'s convention, not acsdd's, and
+nothing there is installed unless you ask for it.
+
+Commit `.acsdd/`. It's hidden to stay out of your source tree's way, not
+because it's disposable: the profile and manifests are what the whole
+workflow reads.
+
+**Onboarded before v0.7.0?** Your repo has a top-level `acsdd/profiles/` and
+`capabilities/` instead. Both are still found — acsdd falls back to them and
+prints a one-line note — but new output always goes to `.acsdd/`. To move:
+
+```bash
+mkdir -p .acsdd
+mv acsdd/profiles .acsdd/profiles && rmdir acsdd
+mv capabilities .acsdd/capabilities
+```
+
 ## Quickstart
 
 This is the full path from "just installed" to a working ACSDD setup in your
@@ -75,7 +105,7 @@ acsdd profile discover .
 
 `--profile-id` is optional — omit it and acsdd uses your repo directory's
 name (`my-project` here); pass `--profile-id something-else` to override it.
-This writes three files under `./acsdd/profiles/`: `my-project-draft.yaml`
+This writes three files under `./.acsdd/profiles/`: `my-project-draft.yaml`
 (the profile itself), a discovery report, and a recommendations doc.
 Detection is best-effort — it leaves a `[REVIEW REQUIRED]` placeholder
 wherever it couldn't determine something (an unusual stack, a database engine
@@ -88,7 +118,7 @@ detect). Step 4 is about resolving those.
 acsdd profile validate
 ```
 
-PROFILE_PATH is optional too — same auto-detection under `./acsdd/profiles`
+PROFILE_PATH is optional too — same auto-detection under `./.acsdd/profiles`
 as `capability generate`. This only checks structural shape — it passes
 just as happily on a draft still full of `[REVIEW REQUIRED]` placeholders as
 it does on a fully-reviewed one. It won't tell you whether you're actually
@@ -133,7 +163,7 @@ wouldn't make sense).
 This is the actual completeness gate: it refuses to run (listing exactly
 which fields) if any `[REVIEW REQUIRED]` placeholder remains anywhere in the
 profile. Once it's clean, it writes the finalized profile as
-`./acsdd/profiles/my-project.yaml` (`status: active`, version bumped to
+`./.acsdd/profiles/my-project.yaml` (`status: active`, version bumped to
 `1.0.0`) — this is the file to point at everything downstream from here.
 
 **6. Generate a capability manifest from that profile.** Do this once per
@@ -148,9 +178,9 @@ acsdd capability generate --id BE-001 --category BE
 ```
 
 `--profile` is optional here too — omit it and acsdd looks under
-`./acsdd/profiles` for you, preferring the finalized profile over a draft
+`./.acsdd/profiles` for you, preferring the finalized profile over a draft
 if both exist (pass `--profile PATH` explicitly if you have more than one
-profile there and need to pick). This auto-creates `capabilities/_manifests/`
+profile there and need to pick). This auto-creates `.acsdd/capabilities/_manifests/`
 (and a matching procedure-doc folder) the first time you run it, pre-fills
 everything derivable from the profile (adapter stack, profile constraints,
 quality gates), and leaves the parts that require actual knowledge of the
@@ -165,7 +195,7 @@ acsdd capability validate
 acsdd catalog build
 ```
 
-`acsdd catalog build` regenerates `capabilities/CATALOG.md` from every
+`acsdd catalog build` regenerates `.acsdd/capabilities/CATALOG.md` from every
 manifest under `_manifests/` — repeat steps 6-7 for each new capability, and
 re-run `catalog build` any time you add, version, or deprecate one. Wire
 `acsdd catalog verify` into CI (see [`acsdd catalog`](#acsdd-catalog) below)
@@ -176,12 +206,12 @@ so a stale catalog or an invalid manifest fails the build automatically.
 ### `acsdd capability`
 
 ```bash
-acsdd capability validate                 # validate every manifest in ./capabilities/_manifests
+acsdd capability validate                 # validate every manifest in ./.acsdd/capabilities/_manifests
 acsdd capability validate path/to/X.yaml  # validate a single manifest
 acsdd capability list                     # table of every capability found
 acsdd capability list --category DB       # filtered
 acsdd capability show DB-004              # full manifest + resolved dependency chain
-acsdd capability generate --id BE-005 --category BE   # --profile defaults to ./acsdd/profiles
+acsdd capability generate --id BE-005 --category BE   # --profile defaults to ./.acsdd/profiles
 acsdd capability generate --profile P --id BE-005 --category BE  # or set it explicitly
 ```
 
@@ -196,7 +226,7 @@ acsdd capability generate --profile P --id BE-005 --category BE  # or set it exp
 ### `acsdd catalog`
 
 ```bash
-acsdd catalog build     # regenerate capabilities/CATALOG.md from the manifests
+acsdd catalog build     # regenerate .acsdd/capabilities/CATALOG.md from the manifests
 acsdd catalog verify    # exit 1 if CATALOG.md is stale or any manifest is invalid — for CI
 ```
 
@@ -212,10 +242,10 @@ catalog fails the build instead of silently drifting from reality.
 ```bash
 acsdd profile discover /path/to/repo                        # --profile-id defaults to the dir name
 acsdd profile discover /path/to/repo --profile-id my-project # or set it explicitly
-acsdd profile validate                                       # PROFILE_PATH defaults to ./acsdd/profiles
-acsdd profile validate acsdd/profiles/my-project-draft.yaml  # or set it explicitly
-acsdd profile create                                         # --draft defaults to ./acsdd/profiles
-acsdd profile create --draft acsdd/profiles/my-project-draft.yaml  # or set it explicitly
+acsdd profile validate                                       # PROFILE_PATH defaults to ./.acsdd/profiles
+acsdd profile validate .acsdd/profiles/my-project-draft.yaml  # or set it explicitly
+acsdd profile create                                         # --draft defaults to ./.acsdd/profiles
+acsdd profile create --draft .acsdd/profiles/my-project-draft.yaml  # or set it explicitly
 acsdd profile review                                         # what's still [REVIEW REQUIRED], and how to resolve it
 acsdd profile review --json --repo-path .                    # same report, machine-readable
 ```
@@ -265,7 +295,7 @@ profile's `[REVIEW REQUIRED]` fields by investigating the repo, proposing a
 value per field with evidence, waiting for your sign-off, then finalizing.
 
 Installing is explicit and opt-in — `profile discover` never writes outside
-`./acsdd/profiles`, and `.claude/` belongs to a different tool and is often
+`./.acsdd/profiles`, and `.claude/` belongs to a different tool and is often
 hand-edited, so an existing file is never overwritten without `--force`.
 
 ### `acsdd update`
@@ -299,8 +329,8 @@ acsdd-cli/
 │   ├── capability/                # manifest loading + validation + generation
 │   ├── catalog/                   # CATALOG.md generation
 │   └── profile/                   # repo discovery + profile review/validation/finalization
-├── tests/                         # pytest suite (122 tests)
-└── capabilities/                  # example data: 4 real capability manifests + docs
+├── tests/                         # pytest suite
+└── .acsdd/capabilities/           # example data: 4 real capability manifests + docs
     ├── CATALOG.md                 # generated — run `acsdd catalog build` to refresh
     ├── _manifests/
     │   ├── DB-001.yaml .. DB-004.yaml
