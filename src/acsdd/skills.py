@@ -127,6 +127,12 @@ SKILLS: Dict[str, SkillAsset] = {
         summary=("Diagram the architectural impact of a planned change: what's "
                  "new, modified, removed, or merely involved."),
     ),
+    "graph-import": SkillAsset(
+        name="graph-import",
+        resource="skills/graph-import/SKILL.md",
+        summary=("Turn a PRD into the business layer of the engineering "
+                 "knowledge graph, mapped onto the capabilities that deliver it."),
+    ),
 }
 
 

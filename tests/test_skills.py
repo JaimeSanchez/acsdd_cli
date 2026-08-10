@@ -50,6 +50,35 @@ def test_c4_component_diagram_asset_loads_via_importlib_resources():
         assert f'AddElementTag("{tag}"' in content
 
 
+def test_graph_import_asset_loads_via_importlib_resources():
+    content = read_skill("graph-import")
+    assert content.startswith("---\n")
+    # The whole design of this skill is that the vocabulary, the allowed-edge
+    # matrix and the rule table come from the payload rather than being
+    # restated here. Losing this line is how it starts inventing them.
+    assert "acsdd graph context --json" in content
+    # The commands it hands back to the user, which are the gate.
+    assert "acsdd graph apply" in content
+    assert "--dry-run" in content
+    assert "acsdd graph validate" in content
+
+
+def test_graph_import_refuses_to_carry_the_rule_tables_itself():
+    """The vocabulary is published by `graph context --json` and versioned with
+    the schema. A skill that listed the node types would go stale the first
+    time one was added, and would go stale silently."""
+    content = read_skill("graph-import")
+
+    from acsdd.graph.vocabulary import EDGE_TYPES
+
+    # A couple of edge-type names appear in prose as examples, which is fine;
+    # what must not appear is the matrix — every edge type enumerated.
+    named = [name for name in EDGE_TYPES if name in content]
+    assert len(named) < len(EDGE_TYPES), (
+        f"graph-import names every edge type ({named}) — it is restating the "
+        f"matrix instead of reading it from `acsdd graph context --json`")
+
+
 def test_unknown_skill_raises_with_the_available_names():
     with pytest.raises(SkillError) as exc:
         read_skill("does-not-exist")

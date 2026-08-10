@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ACSDD Graph ChangeSet",
+  "description": "A proposed delta against the repository graph, written by an agent and ingested by `acsdd graph apply`. The node/edge/evidence/source $defs are duplicated from engineering-graph.schema.json rather than $ref'd across files, which would require $id declarations and a resolver registry; tests/test_graph_vocabulary.py asserts the two files' enums stay identical so the duplication cannot drift silently.",
+  "type": "object",
+  "required": ["changeset"],
+  "properties": {
+    "changeset": {
+      "type": "object",
+      "required": ["id", "title", "operations"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+          "description": "The change id — the directory name under .acsdd/changes/."
+        },
+        "title": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "base_revision": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9]{4}-[0-9a-f]{8}$",
+          "description": "The graph revision this delta was computed against. null means 'any base'. A mismatch is refused unless --force."
+        },
+        "acsdd_version": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["op"],
+            "properties": {
+              "op": {
+                "type": "string",
+                "enum": [
+                  "add_node",
+                  "update_node",
+                  "remove_node",
+                  "add_edge",
+                  "remove_edge"
+                ],
+                "description": "There is deliberately no update_edge: an edge IS (from, type, to), so changing the triple changes its identity and changing its metadata is remove plus add."
+              },
+              "node": { "$ref": "#/$defs/node" },
+              "edge": { "$ref": "#/$defs/edge" },
+              "id": {
+                "type": "string",
+                "description": "The target of update_node / remove_node / remove_edge."
+              },
+              "fields": {
+                "type": "object",
+                "description": "update_node only: the node fields to overwrite."
+              },
+              "reason": { "type": "string", "maxLength": 300 }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "op": { "const": "add_node" } }, "required": ["op"] },
+                "then": { "required": ["node"] }
+              },
+              {
+                "if": { "properties": { "op": { "const": "add_edge" } }, "required": ["op"] },
+                "then": { "required": ["edge"] }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "op": { "enum": ["update_node", "remove_node", "remove_edge"] }
+                  },
+                  "required": ["op"]
+                },
+                "then": { "required": ["id"] }
+              },
+              {
+                "if": { "properties": { "op": { "const": "update_node" } }, "required": ["op"] },
+                "then": { "required": ["fields"] }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "lines": { "type": "string", "pattern": "^[0-9]+(-[0-9]+)?$" },
+        "quote": { "type": "string", "maxLength": 200 },
+        "note": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind", "ref", "at"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["agent", "detector", "human", "import"] },
+        "ref": { "type": "string", "minLength": 1 },
+        "at": { "type": "string", "format": "date" },
+        "agent": { "type": "string" },
+        "acsdd_version": { "type": "string" }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z]{2,4}:[A-Za-z0-9][A-Za-z0-9._-]{1,63}$"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Requirement",
+            "AcceptanceCriterion",
+            "BusinessRule",
+            "Constraint",
+            "Capability",
+            "Container",
+            "Component",
+            "Interface",
+            "DataEntity",
+            "QualityGate",
+            "ExternalSystem",
+            "Module",
+            "Test"
+          ]
+        },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "summary": { "type": "string", "maxLength": 500 },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "source": { "$ref": "#/$defs/source" },
+        "confidence": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "status": { "type": "string", "enum": ["proposed", "active", "deprecated"] }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": ["type", "from", "to"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Optional in a changeset — acsdd derives it from (from, type, to). Supplying a disagreeing one is a finding."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "refines",
+            "governs",
+            "delivered_by",
+            "implemented_by",
+            "depends_on",
+            "exposes",
+            "owns",
+            "realized_in",
+            "verifies",
+            "contains"
+          ]
+        },
+        "from": {
+          "type": "string",
+          "pattern": "^[a-z]{2,4}:[A-Za-z0-9][A-Za-z0-9._-]{1,63}$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^[a-z]{2,4}:[A-Za-z0-9][A-Za-z0-9._-]{1,63}$"
+        },
+        "rationale": { "type": "string", "maxLength": 500 },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "source": { "$ref": "#/$defs/source" },
+        "confidence": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    }
+  }
+}

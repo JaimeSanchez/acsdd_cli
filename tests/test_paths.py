@@ -1,8 +1,12 @@
 """Layout resolution: the new .acsdd/ root plus the pre-.acsdd fallback."""
 
 from acsdd.paths import (
+    change_artifact_paths,
     profile_artifact_paths,
+    resolve_acsdd_root,
     resolve_capabilities_dir,
+    resolve_changes_dir,
+    resolve_graph_dir,
     resolve_profiles_dir,
 )
 
@@ -154,3 +158,61 @@ def test_profile_artifact_paths_can_exclude_the_finalized_profile(tmp_path):
 
 def test_profile_artifact_paths_does_not_require_the_files_to_exist(tmp_path):
     assert not any(p.exists() for p in profile_artifact_paths(tmp_path, "nope"))
+
+
+# ---------------------------------------------------------------------
+# graph + changes
+# ---------------------------------------------------------------------
+
+def test_graph_dir_resolves_under_the_acsdd_root(tmp_path):
+    (tmp_path / ".acsdd" / "graph").mkdir(parents=True)
+
+    assert resolve_acsdd_root(tmp_path) == tmp_path / ".acsdd"
+    assert resolve_graph_dir(tmp_path) == tmp_path / ".acsdd" / "graph"
+
+
+def test_graph_dir_walks_up_from_a_subdirectory(tmp_path):
+    # The graph is repo-scoped, so running a graph command from src/ has to
+    # find the same graph as running it from the root.
+    (tmp_path / ".acsdd" / "graph").mkdir(parents=True)
+    deep = tmp_path / "src" / "Domain" / "Payment"
+    deep.mkdir(parents=True)
+
+    assert resolve_graph_dir(deep) == tmp_path / ".acsdd" / "graph"
+
+
+def test_an_acsdd_root_is_recognized_by_profiles_or_capabilities_too(tmp_path):
+    # A repo that has only been through `profile discover` must anchor on its
+    # own .acsdd rather than walking past it into a parent's.
+    (tmp_path / ".acsdd" / "profiles").mkdir(parents=True)
+
+    assert resolve_acsdd_root(tmp_path) == tmp_path / ".acsdd"
+
+
+def test_graph_and_changes_resolve_off_the_same_root(tmp_path):
+    # Two independent walk-ups would let a distant ancestor's changes/ pair
+    # with the local graph/ — the bug resolve_capabilities_dir documents.
+    parent = tmp_path / "outer"
+    (parent / ".acsdd" / "changes").mkdir(parents=True)
+    repo = parent / "inner"
+    (repo / ".acsdd" / "graph").mkdir(parents=True)
+
+    assert resolve_graph_dir(repo) == repo / ".acsdd" / "graph"
+    assert resolve_changes_dir(repo) == repo / ".acsdd" / "changes"
+
+
+def test_graph_dir_falls_back_to_cwd_when_nothing_exists(tmp_path):
+    # Where a first graph should be created.
+    assert resolve_graph_dir(tmp_path) == tmp_path / ".acsdd" / "graph"
+    assert resolve_changes_dir(tmp_path) == tmp_path / ".acsdd" / "changes"
+
+
+def test_change_artifact_paths_covers_all_three_files(tmp_path):
+    paths = change_artifact_paths(tmp_path, "checkout-guest")
+
+    assert [p.name for p in paths] == ["change.json", "changeset.json", "applied.json"]
+    assert all(p.parent == tmp_path / "checkout-guest" for p in paths)
+
+
+def test_change_artifact_paths_does_not_require_the_files_to_exist(tmp_path):
+    assert not any(p.exists() for p in change_artifact_paths(tmp_path, "nope"))

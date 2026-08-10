@@ -1,0 +1,482 @@
+{
+  "graph": {
+    "meta": {
+      "version": "1.0.0",
+      "generated_at": "2026-08-10",
+      "acsdd_version": "0.10.0",
+      "revision": "0001-1d3b0d9e",
+      "graph_hash": "1d3b0d9ef9856e86ea2f4b11d2e3d5c551288fb0846e3b47e90e42ffb04e462f"
+    },
+    "nodes": [
+      {
+        "id": "cap:DB-001",
+        "type": "Capability",
+        "name": "Identify Doctrine Entities",
+        "attributes": {
+          "category": "DB"
+        },
+        "source": {
+          "kind": "import",
+          "ref": ".acsdd/capabilities/_manifests/DB-001.yaml",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cap:DB-002",
+        "type": "Capability",
+        "name": "Create Doctrine Entity",
+        "attributes": {
+          "category": "DB"
+        },
+        "source": {
+          "kind": "import",
+          "ref": ".acsdd/capabilities/_manifests/DB-002.yaml",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cap:DB-003",
+        "type": "Capability",
+        "name": "Update Doctrine Entity",
+        "attributes": {
+          "category": "DB"
+        },
+        "source": {
+          "kind": "import",
+          "ref": ".acsdd/capabilities/_manifests/DB-003.yaml",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cap:DB-004",
+        "type": "Capability",
+        "name": "Create Doctrine Migration",
+        "attributes": {
+          "category": "DB"
+        },
+        "source": {
+          "kind": "import",
+          "ref": ".acsdd/capabilities/_manifests/DB-004.yaml",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cmp:capability",
+        "type": "Component",
+        "name": "Capability Engine",
+        "summary": "Manifest loading, schema and cross-manifest validation, scaffolding, recommendation, removal.",
+        "evidence": [
+          {
+            "path": "src/acsdd/capability/validator.py"
+          }
+        ],
+        "source": {
+          "kind": "human",
+          "ref": "CLAUDE.md",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cmp:catalog",
+        "type": "Component",
+        "name": "Catalog Builder",
+        "summary": "Regenerates CATALOG.md purely from the manifest dicts, so it can be diffed for drift.",
+        "evidence": [
+          {
+            "path": "src/acsdd/catalog/builder.py"
+          }
+        ],
+        "source": {
+          "kind": "human",
+          "ref": "CLAUDE.md",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cmp:cli",
+        "type": "Component",
+        "name": "Command Layer",
+        "summary": "Click groups and options. A thin wrapper: resolves paths, calls a module, formats output.",
+        "attributes": {
+          "technology": "click"
+        },
+        "evidence": [
+          {
+            "path": "src/acsdd/cli.py"
+          }
+        ],
+        "source": {
+          "kind": "human",
+          "ref": "CLAUDE.md",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cmp:graph",
+        "type": "Component",
+        "name": "Knowledge Graph Engine",
+        "summary": "The typed graph, its integrity rules, changeset ingest, and the agent-facing context payload.",
+        "evidence": [
+          {
+            "path": "src/acsdd/graph/integrity.py"
+          }
+        ],
+        "source": {
+          "kind": "human",
+          "ref": "CLAUDE.md",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cmp:paths",
+        "type": "Component",
+        "name": "Layout Resolver",
+        "summary": "The single authority on where acsdd's artifacts live inside a consumer repo.",
+        "evidence": [
+          {
+            "path": "src/acsdd/paths.py"
+          }
+        ],
+        "source": {
+          "kind": "human",
+          "ref": "CLAUDE.md",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cmp:profile",
+        "type": "Component",
+        "name": "Profile Engine",
+        "summary": "Repository discovery, review guidance, validation, and finalization.",
+        "evidence": [
+          {
+            "path": "src/acsdd/profile/_discovery_impl.py"
+          }
+        ],
+        "source": {
+          "kind": "human",
+          "ref": "CLAUDE.md",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "cmp:skills",
+        "type": "Component",
+        "name": "Skill Installer",
+        "summary": "Copies the packaged agent skills into a consumer repo, for every agent convention.",
+        "evidence": [
+          {
+            "path": "src/acsdd/skills.py"
+          }
+        ],
+        "source": {
+          "kind": "human",
+          "ref": "CLAUDE.md",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "ctr:acsdd-cli",
+        "type": "Container",
+        "name": "acsdd CLI",
+        "summary": "The command-line tool itself, distributed as a pip package and a PyInstaller binary.",
+        "attributes": {
+          "technology": "python"
+        },
+        "source": {
+          "kind": "human",
+          "ref": "CLAUDE.md",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "ext:github-releases",
+        "type": "ExternalSystem",
+        "name": "GitHub Releases",
+        "summary": "Where the standalone binary is published and where `acsdd update` fetches it from.",
+        "source": {
+          "kind": "human",
+          "ref": "src/acsdd/update.py",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "ifc:acsdd-command",
+        "type": "Interface",
+        "name": "acsdd command",
+        "summary": "The CLI surface consumers depend on. Its JSON payloads are what agent skills read.",
+        "attributes": {
+          "protocol": "cli"
+        },
+        "source": {
+          "kind": "human",
+          "ref": "README.md",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "mod:acsdd",
+        "type": "Module",
+        "name": "acsdd",
+        "attributes": {
+          "language": "python",
+          "path": "src/acsdd"
+        },
+        "source": {
+          "kind": "human",
+          "ref": "pyproject.toml",
+          "at": "2026-08-10"
+        }
+      },
+      {
+        "id": "test:suite",
+        "type": "Test",
+        "name": "pytest suite",
+        "attributes": {
+          "framework": "pytest",
+          "path": "tests"
+        },
+        "source": {
+          "kind": "human",
+          "ref": "pyproject.toml",
+          "at": "2026-08-10"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "cap:DB-001|implemented_by|cmp:capability",
+        "type": "implemented_by",
+        "from": "cap:DB-001",
+        "to": "cmp:capability"
+      },
+      {
+        "id": "cap:DB-002|depends_on|cap:DB-001",
+        "type": "depends_on",
+        "from": "cap:DB-002",
+        "to": "cap:DB-001"
+      },
+      {
+        "id": "cap:DB-002|implemented_by|cmp:capability",
+        "type": "implemented_by",
+        "from": "cap:DB-002",
+        "to": "cmp:capability"
+      },
+      {
+        "id": "cap:DB-003|depends_on|cap:DB-001",
+        "type": "depends_on",
+        "from": "cap:DB-003",
+        "to": "cap:DB-001"
+      },
+      {
+        "id": "cap:DB-003|implemented_by|cmp:capability",
+        "type": "implemented_by",
+        "from": "cap:DB-003",
+        "to": "cmp:capability"
+      },
+      {
+        "id": "cap:DB-004|depends_on|cap:DB-001",
+        "type": "depends_on",
+        "from": "cap:DB-004",
+        "to": "cap:DB-001"
+      },
+      {
+        "id": "cap:DB-004|implemented_by|cmp:capability",
+        "type": "implemented_by",
+        "from": "cap:DB-004",
+        "to": "cmp:capability"
+      },
+      {
+        "id": "cmp:capability|depends_on|cmp:paths",
+        "type": "depends_on",
+        "from": "cmp:capability",
+        "to": "cmp:paths",
+        "rationale": "Layout is never spelled out outside paths.py."
+      },
+      {
+        "id": "cmp:capability|realized_in|mod:acsdd",
+        "type": "realized_in",
+        "from": "cmp:capability",
+        "to": "mod:acsdd"
+      },
+      {
+        "id": "cmp:catalog|depends_on|cmp:capability",
+        "type": "depends_on",
+        "from": "cmp:catalog",
+        "to": "cmp:capability",
+        "rationale": "CATALOG.md is rendered from loaded manifest dicts."
+      },
+      {
+        "id": "cmp:catalog|realized_in|mod:acsdd",
+        "type": "realized_in",
+        "from": "cmp:catalog",
+        "to": "mod:acsdd"
+      },
+      {
+        "id": "cmp:cli|depends_on|cmp:capability",
+        "type": "depends_on",
+        "from": "cmp:cli",
+        "to": "cmp:capability"
+      },
+      {
+        "id": "cmp:cli|depends_on|cmp:catalog",
+        "type": "depends_on",
+        "from": "cmp:cli",
+        "to": "cmp:catalog"
+      },
+      {
+        "id": "cmp:cli|depends_on|cmp:graph",
+        "type": "depends_on",
+        "from": "cmp:cli",
+        "to": "cmp:graph"
+      },
+      {
+        "id": "cmp:cli|depends_on|cmp:paths",
+        "type": "depends_on",
+        "from": "cmp:cli",
+        "to": "cmp:paths"
+      },
+      {
+        "id": "cmp:cli|depends_on|cmp:profile",
+        "type": "depends_on",
+        "from": "cmp:cli",
+        "to": "cmp:profile"
+      },
+      {
+        "id": "cmp:cli|depends_on|cmp:skills",
+        "type": "depends_on",
+        "from": "cmp:cli",
+        "to": "cmp:skills"
+      },
+      {
+        "id": "cmp:cli|depends_on|ext:github-releases",
+        "type": "depends_on",
+        "from": "cmp:cli",
+        "to": "ext:github-releases",
+        "rationale": "`acsdd update` downloads the binary from the latest release."
+      },
+      {
+        "id": "cmp:cli|exposes|ifc:acsdd-command",
+        "type": "exposes",
+        "from": "cmp:cli",
+        "to": "ifc:acsdd-command",
+        "rationale": "Every subcommand group is declared here."
+      },
+      {
+        "id": "cmp:cli|realized_in|mod:acsdd",
+        "type": "realized_in",
+        "from": "cmp:cli",
+        "to": "mod:acsdd"
+      },
+      {
+        "id": "cmp:graph|depends_on|cmp:capability",
+        "type": "depends_on",
+        "from": "cmp:graph",
+        "to": "cmp:capability",
+        "rationale": "Integrity rules cross-check Capability nodes against real manifests."
+      },
+      {
+        "id": "cmp:graph|depends_on|cmp:paths",
+        "type": "depends_on",
+        "from": "cmp:graph",
+        "to": "cmp:paths"
+      },
+      {
+        "id": "cmp:graph|realized_in|mod:acsdd",
+        "type": "realized_in",
+        "from": "cmp:graph",
+        "to": "mod:acsdd"
+      },
+      {
+        "id": "cmp:paths|realized_in|mod:acsdd",
+        "type": "realized_in",
+        "from": "cmp:paths",
+        "to": "mod:acsdd"
+      },
+      {
+        "id": "cmp:profile|depends_on|cmp:paths",
+        "type": "depends_on",
+        "from": "cmp:profile",
+        "to": "cmp:paths"
+      },
+      {
+        "id": "cmp:profile|realized_in|mod:acsdd",
+        "type": "realized_in",
+        "from": "cmp:profile",
+        "to": "mod:acsdd"
+      },
+      {
+        "id": "cmp:skills|realized_in|mod:acsdd",
+        "type": "realized_in",
+        "from": "cmp:skills",
+        "to": "mod:acsdd"
+      },
+      {
+        "id": "ctr:acsdd-cli|contains|cmp:capability",
+        "type": "contains",
+        "from": "ctr:acsdd-cli",
+        "to": "cmp:capability"
+      },
+      {
+        "id": "ctr:acsdd-cli|contains|cmp:catalog",
+        "type": "contains",
+        "from": "ctr:acsdd-cli",
+        "to": "cmp:catalog"
+      },
+      {
+        "id": "ctr:acsdd-cli|contains|cmp:cli",
+        "type": "contains",
+        "from": "ctr:acsdd-cli",
+        "to": "cmp:cli"
+      },
+      {
+        "id": "ctr:acsdd-cli|contains|cmp:graph",
+        "type": "contains",
+        "from": "ctr:acsdd-cli",
+        "to": "cmp:graph"
+      },
+      {
+        "id": "ctr:acsdd-cli|contains|cmp:paths",
+        "type": "contains",
+        "from": "ctr:acsdd-cli",
+        "to": "cmp:paths"
+      },
+      {
+        "id": "ctr:acsdd-cli|contains|cmp:profile",
+        "type": "contains",
+        "from": "ctr:acsdd-cli",
+        "to": "cmp:profile"
+      },
+      {
+        "id": "ctr:acsdd-cli|contains|cmp:skills",
+        "type": "contains",
+        "from": "ctr:acsdd-cli",
+        "to": "cmp:skills"
+      },
+      {
+        "id": "test:suite|verifies|cmp:capability",
+        "type": "verifies",
+        "from": "test:suite",
+        "to": "cmp:capability"
+      },
+      {
+        "id": "test:suite|verifies|cmp:graph",
+        "type": "verifies",
+        "from": "test:suite",
+        "to": "cmp:graph"
+      },
+      {
+        "id": "test:suite|verifies|cmp:paths",
+        "type": "verifies",
+        "from": "test:suite",
+        "to": "cmp:paths"
+      },
+      {
+        "id": "test:suite|verifies|cmp:profile",
+        "type": "verifies",
+        "from": "test:suite",
+        "to": "cmp:profile"
+      }
+    ]
+  }
+}
