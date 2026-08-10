@@ -3,4 +3,4 @@ Development & Delivery framework: capability manifests, the capability
 catalog, and repository engineering profiles.
 """
 
-__version__ = "0.9.2"
+__version__ = "0.10.0"
