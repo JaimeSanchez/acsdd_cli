@@ -70,12 +70,16 @@ your-repo/
 ├── .acsdd/
 │   ├── profiles/           # engineering profile (draft + finalized), discovery report
 │   └── capabilities/       # capability manifests, CATALOG.md, procedure docs
-└── .claude/skills/         # only if you run `acsdd skill install`
+├── .agents/skills/         # only if you run `acsdd skill install`
+└── .claude/skills/         # ditto
 ```
 
-`.claude/` is deliberately outside it — that path is
-[Claude Code](https://claude.com/claude-code)'s convention, not acsdd's, and
-nothing there is installed unless you ask for it.
+The two skills directories are deliberately outside it — those paths are other
+agents' conventions, not acsdd's, and nothing there is installed unless you ask
+for it. `.agents/skills/` is the shared convention read by Codex, Cursor, Kimi
+CLI, Gemini CLI, Copilot, OpenCode, Amp, Cline and Warp;
+[Claude Code](https://claude.com/claude-code) reads `.claude/skills/` instead,
+so `acsdd skill install` writes both.
 
 Commit `.acsdd/`. It's hidden to stay out of your source tree's way, not
 because it's disposable: the profile and manifests are what the whole
@@ -147,13 +151,13 @@ the draft or re-run discovery. It's informational, not a gate — it exits 0
 even when it finds work to do, so wire `acsdd profile validate --strict` into
 CI, never this.
 
-If you use Claude Code, you can hand the whole step over:
+You can hand the whole step over to a coding agent:
 
 ```bash
-acsdd skill install profile-review   # writes .claude/skills/profile-review/SKILL.md
+acsdd skill install profile-review   # for Claude Code, Codex, Cursor, Kimi, ...
 ```
 
-Then ask Claude Code to *"finish my ACSDD profile"*. It reads the same JSON
+Then ask it to *"finish my ACSDD profile"*. It reads the same JSON
 this command emits (`acsdd profile review --json`), investigates your repo,
 proposes a value per field with the evidence it found, and waits for your
 sign-off before touching the draft.
@@ -193,7 +197,7 @@ whatever it finds.
 [Keeping capabilities in step with the profile](#keeping-capabilities-in-step-with-the-profile)
 below.
 
-If you use Claude Code, `acsdd skill install` also ships a `capability-plan`
+`acsdd skill install` also ships a `capability-plan`
 skill for this step: it reads `acsdd capability recommend --json`, checks each
 recommendation against your actual code, and proposes a set for you to sign off
 on before anything is created.
@@ -230,6 +234,12 @@ manifest under `_manifests/` — repeat steps 7-8 for each new capability, and
 re-run `catalog build` any time you add, version, or deprecate one. Wire
 `acsdd catalog verify` into CI (see [`acsdd catalog`](#acsdd-catalog) below)
 so a stale catalog or an invalid manifest fails the build automatically.
+
+That's onboarding done. From here the work is per-change rather than per-repo,
+and `acsdd skill install` ships one more skill for it: **`c4-component-diagram`**
+turns a PRD or implementation plan into a C4 Component diagram of what the
+change actually touches — which components are new, which have to be modified,
+which go away — written to `docs/architecture/` before implementation starts.
 
 ## Keeping capabilities in step with the profile
 
@@ -376,16 +386,17 @@ error message.
 ### `acsdd skill`
 
 ```bash
-acsdd skill list                    # shipped skills + whether each is installed here
-acsdd skill install                 # install all of them into ./.claude/skills/
+acsdd skill list                    # shipped skills + which agents can see each
+acsdd skill install                 # all of them, for every agent convention
 acsdd skill install profile-review  # or just one
+acsdd skill install --agent claude  # or just one agent convention
 acsdd skill install --dir /path/to/repo --force
 acsdd skill show profile-review     # dump the markdown to stdout
 acsdd skill remove profile-review --force   # uninstall it again
 ```
 
-Installs the [Claude Code](https://claude.com/claude-code) skills acsdd ships
-into a repository. Currently two, one per judgement-heavy step of the workflow:
+Installs the agent skills acsdd ships into a repository. Currently three, one
+per judgement-heavy step of the workflow:
 
 - **`profile-review`** — resolves a draft profile's `[REVIEW REQUIRED]` fields
   by investigating the repo, proposing a value per field with evidence, waiting
@@ -393,18 +404,44 @@ into a repository. Currently two, one per judgement-heavy step of the workflow:
 - **`capability-plan`** — decides which capabilities the finished profile
   implies, checks each candidate against your actual code, and updates the
   manifests a profile change has left stale.
+- **`c4-component-diagram`** — reads a PRD or implementation plan against your
+  repo and writes a C4 Component diagram of the architectural impact into
+  `docs/architecture/`, classifying every component as new, modified, removed,
+  or merely involved.
 
-Both drive themselves off the matching command's `--json` output
+The first two drive themselves off the matching command's `--json` output
 (`acsdd profile review --json`, `acsdd capability recommend --json`) rather than
 restating what the CLI knows, so neither goes stale when detection changes.
+`c4-component-diagram` has no CLI partner — C4-PlantUML's conventions come from
+outside acsdd and don't move when detection does — but it still reads a
+finalized profile's `technology_stack` when there is one, and works in repos
+that have never seen acsdd.
+
+**None of it is Claude-specific.** A skill is YAML frontmatter (`name`,
+`description`) over markdown procedure that shells out to `acsdd ... --json`,
+which any agent can run — only the install path differs. `install` writes one
+copy per convention:
+
+| Path | Read by |
+|------|---------|
+| `.agents/skills/<name>/SKILL.md` | Codex, Cursor, Kimi CLI, Gemini CLI, Copilot, OpenCode, Amp, Cline, Warp |
+| `.claude/skills/<name>/SKILL.md` | Claude Code |
+
+Both are written by default, so the skill is visible whichever agent the repo is
+driven with; `--agent agents`, `--agent claude` or `--agent all` narrows it, and
+`skill list` shows a mark per convention so you can see at a glance which agents
+a given repo's skills are actually reachable from. The two copies are
+independent files rather than symlinks (which are unreliable on Windows); the
+packaged asset is the source of truth for both, and `--force` re-syncs them.
 
 Installing is explicit and opt-in — `profile discover` never writes outside
-`./.acsdd/profiles`, and `.claude/` belongs to a different tool and is often
-hand-edited, so an existing file is never overwritten without `--force`.
+`./.acsdd/profiles`, and both skills directories belong to other tools and are
+often hand-edited, so an existing file is never overwritten without `--force`.
 
 `remove` takes a skill name (never "all of them" by default, unlike `install`)
-and cleans up the emptied `.claude/skills/<name>/` directory, but leaves
-`.claude/skills/` itself alone — other tools keep their skills there too.
+and clears it from every convention, cleaning up the emptied `<name>/`
+directories but leaving `.agents/skills/` and `.claude/skills/` themselves alone
+— other tools keep their skills there too. It takes the same `--agent` flag.
 
 ### `acsdd update`
 
@@ -431,7 +468,7 @@ acsdd-cli/
 ├── src/acsdd/
 │   ├── cli.py                     # click commands
 │   ├── update.py                  # self-update for the standalone binary
-│   ├── skills.py                  # installs the shipped Claude Code skills
+│   ├── skills.py                  # installs the shipped agent skills
 │   ├── schemas/                   # Appendix A & B JSON Schemas
 │   ├── assets/                    # files installed into a consumer repo (skills)
 │   ├── capability/                # manifest loading + validation + generation + recommendation

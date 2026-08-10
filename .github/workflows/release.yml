@@ -88,7 +88,14 @@ jobs:
           # with pyproject's package-data, this is what catches it.
           TMPREPO=$(mktemp -d)
           ./dist/acsdd-${{ matrix.target }} skill install --dir "$TMPREPO"
-          test -s "$TMPREPO/.claude/skills/profile-review/SKILL.md"
+          # Every shipped skill, for every agent convention. `skill install`
+          # already exits 1 on a missing asset, but naming them makes the
+          # failure say which one — and the .agents/ leg is what proves the
+          # install isn't quietly Claude Code-only.
+          for s in profile-review capability-plan c4-component-diagram; do
+            test -s "$TMPREPO/.agents/skills/$s/SKILL.md"
+            test -s "$TMPREPO/.claude/skills/$s/SKILL.md"
+          done
 
       - name: Checksum
         # Compute from inside dist/ so the checksum file records the bare

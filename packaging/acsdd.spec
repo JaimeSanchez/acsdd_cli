@@ -24,17 +24,22 @@ datas = [
         os.path.join(repo_root, "src", "acsdd", "schemas", "profile.schema.json"),
         "acsdd/schemas",
     ),
-    # Claude Code skills installed into a consumer repo by `acsdd skill
-    # install`, read via importlib.resources.files("acsdd.assets").
+    # Agent skills installed into a consumer repo by `acsdd skill install`,
+    # read via importlib.resources.files("acsdd.assets").
     (
-        os.path.join(repo_root, "src", "acsdd", "assets", "claude", "skills",
+        os.path.join(repo_root, "src", "acsdd", "assets", "skills",
                      "profile-review", "SKILL.md"),
-        "acsdd/assets/claude/skills/profile-review",
+        "acsdd/assets/skills/profile-review",
     ),
     (
-        os.path.join(repo_root, "src", "acsdd", "assets", "claude", "skills",
+        os.path.join(repo_root, "src", "acsdd", "assets", "skills",
                      "capability-plan", "SKILL.md"),
-        "acsdd/assets/claude/skills/capability-plan",
+        "acsdd/assets/skills/capability-plan",
+    ),
+    (
+        os.path.join(repo_root, "src", "acsdd", "assets", "skills",
+                     "c4-component-diagram", "SKILL.md"),
+        "acsdd/assets/skills/c4-component-diagram",
     ),
 ]
 datas += collect_data_files("jsonschema_specifications")

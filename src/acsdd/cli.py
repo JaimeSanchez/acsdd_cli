@@ -41,6 +41,8 @@ from acsdd.skills import (
     is_installed,
     read_skill,
     remove_skill,
+    resolve_targets,
+    skill_paths,
 )
 
 
@@ -1191,9 +1193,14 @@ def profile_remove(profile_id: str, profiles_dir: Optional[Path], force: bool):
 # skill
 # ---------------------------------------------------------------------
 
+_AGENT_HELP = ("Agent convention to install for: 'agents' (.agents/skills/, read by "
+               "Codex, Cursor, Kimi CLI, Gemini CLI, Copilot and others), 'claude' "
+               "(.claude/skills/), or 'all'. Repeatable. Default: all.")
+
+
 @cli.group()
 def skill():
-    """Install the Claude Code skills acsdd ships into this repository.
+    """Install the agent skills acsdd ships into this repository.
 
     A noun group like capability/catalog/profile rather than a subcommand of
     any one of them — the assets aren't profile-specific, and future skills for
@@ -1211,33 +1218,46 @@ def skill_list(repo_root: Path):
         mark = "[x]" if installed else "[ ]"
         click.secho(f"  {mark} {asset.name}", fg="green" if installed else "yellow")
         click.echo(f"        {asset.summary}")
-        click.echo(f"        -> {asset.dest}")
+        # Per-agent, because "installed" is not one state: a repo can be set up
+        # for Claude Code and invisible to Codex, which is exactly the failure
+        # worth surfacing here.
+        for target, path in skill_paths(asset.name, repo_root):
+            sub = "[x]" if path.exists() else "[ ]"
+            click.echo(f"        {sub} {asset.dest(target)}   ({target.reads})")
 
 
 @skill.command("install")
 @click.argument("name", required=False, default=None)
 @click.option("--dir", "repo_root", type=click.Path(exists=True, file_okay=False, path_type=Path),
               default=Path("."), help="Repo root to install into (default: cwd).")
+@click.option("--agent", "agents", multiple=True, help=_AGENT_HELP)
 @click.option("--force", is_flag=True, default=False, help="Overwrite an existing skill file.")
-def skill_install(name: Optional[str], repo_root: Path, force: bool):
-    """Install a shipped skill into ./.claude/skills/ (default: all of them)."""
+def skill_install(name: Optional[str], repo_root: Path, agents: tuple, force: bool):
+    """Install a shipped skill for every agent convention (default: all skills).
+
+    Writes one copy per agent target — `.agents/skills/` for the cross-agent
+    convention and `.claude/skills/` for Claude Code — so the skill is visible
+    whichever agent the repo is driven with.
+    """
     try:
         assets = find_skill(name)
+        resolve_targets(agents or None)
     except SkillError as exc:
         click.secho(f"ERROR: {exc}", fg="red")
         sys.exit(1)
 
     skipped = False
     for asset in assets:
-        result = install_skill(asset.name, repo_root, force=force)
-        if result.written:
-            click.secho(f"Wrote {result.path}", fg="green")
-        else:
-            skipped = True
-            click.secho(
-                f"ERROR: {result.path} already exists — re-run with --force to overwrite.",
-                fg="red",
-            )
+        for result in install_skill(asset.name, repo_root, force=force,
+                                    targets=agents or None):
+            if result.written:
+                click.secho(f"Wrote {result.path}", fg="green")
+            else:
+                skipped = True
+                click.secho(
+                    f"ERROR: {result.path} already exists — re-run with --force to overwrite.",
+                    fg="red",
+                )
 
     if skipped:
         sys.exit(1)
@@ -1247,30 +1267,34 @@ def skill_install(name: Optional[str], repo_root: Path, force: bool):
 @click.argument("name")
 @click.option("--dir", "repo_root", type=click.Path(exists=True, file_okay=False, path_type=Path),
               default=Path("."), help="Repo root to remove from (default: cwd).")
+@click.option("--agent", "agents", multiple=True, help=_AGENT_HELP)
 @click.option("--force", is_flag=True, default=False,
-              help="Actually delete. Without it, the file is only listed.")
-def skill_remove(name: str, repo_root: Path, force: bool):
-    """Remove an installed skill from ./.claude/skills/.
+              help="Actually delete. Without it, the files are only listed.")
+def skill_remove(name: str, repo_root: Path, agents: tuple, force: bool):
+    """Remove an installed skill from every agent convention.
 
     NAME is required, unlike `skill install` where omitting it means "all of
-    them" — that isn't a default worth having on a delete. The `.claude/skills/`
-    directory itself is left alone; it belongs to Claude Code, not to acsdd.
+    them" — that isn't a default worth having on a delete. The `.agents/skills/`
+    and `.claude/skills/` directories themselves are left alone; they belong to
+    other tools, not to acsdd.
     """
     try:
-        asset = find_skill(name)[0]
+        find_skill(name)
+        existing = [path for _, path in skill_paths(name, repo_root, agents or None)
+                    if path.exists()]
     except SkillError as exc:
         click.secho(f"ERROR: {exc}", fg="red")
         sys.exit(1)
 
-    target = repo_root / asset.dest
-    if not target.exists():
-        click.secho(f"ERROR: {target} is not installed.", fg="red")
+    if not existing:
+        click.secho(f"ERROR: {name} is not installed.", fg="red")
         sys.exit(1)
 
-    _require_force_to_remove([target], force)
+    _require_force_to_remove(existing, force)
 
-    result = remove_skill(name, repo_root)
-    click.secho(f"Removed {result.path}", fg="green")
+    for result in remove_skill(name, repo_root, targets=agents or None):
+        if result.removed:
+            click.secho(f"Removed {result.path}", fg="green")
 
 
 @skill.command("show")
