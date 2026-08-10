@@ -26,8 +26,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             target: linux-x86_64
+            # This line sets the binary's glibc floor, and therefore which
+            # distros `curl | sh` works on: PyInstaller bundles a libpython
+            # linked against the build host's libc. Measured, not inferred —
+            # run the artifact under `docker run debian:12` to re-check.
+            #   ubuntu-24.04 (here) -> floor glibc 2.38: Ubuntu 24.04+,
+            #     Fedora 39+, Debian 13+.
+            #   ubuntu-22.04 (previous) -> floor was 2.35.
+            # So moving here newly drops Debian 12 (2.36) and Ubuntu 22.04
+            # (2.35). RHEL/Rocky 9 and Amazon Linux 2023 (both 2.34) were
+            # already out under 22.04 — this did not cost them.
+            # An older image widens support, a newer one narrows it, but
+            # don't downgrade to chase a distro: every image is on a
+            # deprecation clock (22.04 starts brownouts 2026-09-17, fully
+            # unsupported 2027-04-17). Build this leg in a manylinux
+            # container instead if the floor ever has to come down.
           - os: ubuntu-24.04-arm
             target: linux-arm64
           - os: macos-14
@@ -40,11 +55,11 @@ jobs:
           # a dedicated/self-hosted runner for it.
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag || github.ref }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -84,7 +99,7 @@ jobs:
         # the binary is ever copied into place.
         run: cd dist && shasum -a 256 "acsdd-${{ matrix.target }}" > "acsdd-${{ matrix.target }}.sha256"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: acsdd-${{ matrix.target }}
           path: |
@@ -93,15 +108,15 @@ jobs:
 
   release:
     needs: build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag || github.ref }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -112,7 +127,7 @@ jobs:
           cd release && sha256sum acsdd-* > acsdd-checksums.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           files: release/*
