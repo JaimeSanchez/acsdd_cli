@@ -59,6 +59,13 @@ SKILLS: Dict[str, SkillAsset] = {
         dest=PurePosixPath(".claude/skills/profile-review/SKILL.md"),
         summary="Resolve the [REVIEW REQUIRED] fields in a draft engineering profile.",
     ),
+    "capability-plan": SkillAsset(
+        name="capability-plan",
+        resource="claude/skills/capability-plan/SKILL.md",
+        dest=PurePosixPath(".claude/skills/capability-plan/SKILL.md"),
+        summary=("Decide which capabilities this repo should have, and update the "
+                 "manifests a profile change left behind."),
+    ),
 }
 
 
