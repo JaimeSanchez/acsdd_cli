@@ -2,12 +2,19 @@
 
 A command-line tool for working with the ACSDD (AI-Collaborative Software
 Development & Delivery) framework: capability manifests, the capability
-catalog, and repository engineering profiles.
+catalog, repository engineering profiles, and an engineering knowledge graph
+tying them to what a change actually does.
 
-This package ships both the **tool** (`src/acsdd/`) and a working example
-of the **data it operates on** (`.acsdd/capabilities/`) — four real capabilities
-(`DB-001`..`DB-004`, Symfony 4.4 / Doctrine / MySQL 8) so every command
-below can be run immediately against something real.
+This package ships both the **tool** (`src/acsdd/`) and working examples of the
+**data it operates on** — four real capabilities (`DB-001`..`DB-004`, Symfony
+4.4 / Doctrine / MySQL 8) under `.acsdd/capabilities/`, and a real graph of
+acsdd's own architecture under `.acsdd/graph/` — so every command below can be
+run immediately against something real.
+
+**acsdd contains no LLM.** Every judgement-heavy step is a packaged agent skill
+that drives itself off an `acsdd ... --json` command, so the tool stays a
+deterministic, offline, dependency-light binary and the agent you already use
+does the thinking.
 
 ## Install
 
@@ -69,7 +76,9 @@ Everything lives under a single `.acsdd/` directory:
 your-repo/
 ├── .acsdd/
 │   ├── profiles/           # engineering profile (draft + finalized), discovery report
-│   └── capabilities/       # capability manifests, CATALOG.md, procedure docs
+│   ├── capabilities/       # capability manifests, CATALOG.md, procedure docs
+│   ├── graph/              # the engineering knowledge graph + its revision log
+│   └── changes/            # one directory per change: its PRD link and changeset
 ├── .agents/skills/         # only if you run `acsdd skill install`
 └── .claude/skills/         # ditto
 ```
@@ -235,11 +244,51 @@ re-run `catalog build` any time you add, version, or deprecate one. Wire
 `acsdd catalog verify` into CI (see [`acsdd catalog`](#acsdd-catalog) below)
 so a stale catalog or an invalid manifest fails the build automatically.
 
-That's onboarding done. From here the work is per-change rather than per-repo,
-and `acsdd skill install` ships one more skill for it: **`c4-component-diagram`**
-turns a PRD or implementation plan into a C4 Component diagram of what the
-change actually touches — which components are new, which have to be modified,
-which go away — written to `docs/architecture/` before implementation starts.
+That's onboarding done. From here the work is **per-change** rather than
+per-repo.
+
+**9. Plan a change against the knowledge graph.** Onboarding described what your
+repo *is*; this describes what a change *does to it*, as a typed graph
+connecting each requirement to the capability that delivers it, the component
+that implements it, and the tests that prove it:
+
+```bash
+acsdd change new "Guest checkout" --prd docs/prd/checkout.md
+acsdd graph context --json --for prd-import
+```
+
+acsdd does not read your PRD — interpreting one is judgement work, so it belongs
+to an agent. `graph context` hands that agent the complete node and edge
+vocabulary, every integrity rule, the changeset format and your capability
+catalog; the packaged **`graph-import`** skill drives it, investigates your
+code, and stops for your sign-off before writing anything. Then:
+
+```bash
+acsdd graph apply --change guest-checkout --dry-run   # writes nothing
+acsdd graph apply --change guest-checkout
+acsdd graph validate --change guest-checkout --strict
+```
+
+`apply` is the gate: it refuses anything that fails the schema or would leave
+the graph inconsistent — a dangling edge, a requirement nothing delivers, a
+cycle where the edge type forbids one. Running it twice writes nothing and cuts
+no revision, so re-running after a partial failure is safe. What lands is a
+reviewable line diff in `.acsdd/graph/graph.json`, which you commit like any
+other artifact.
+
+The most valuable output is usually what the import *couldn't* resolve:
+requirements no existing capability can deliver, and ambiguities the PRD left
+open. Those are reported as findings rather than quietly decided.
+
+**10. Diagram the impact.** `acsdd skill install` ships one more skill,
+**`c4-component-diagram`**, which turns the same change into a C4 Component
+diagram of what it actually touches — new, modified, removed, or merely involved
+— written to `docs/architecture/` before implementation starts. It can take its
+classification straight from the graph:
+
+```bash
+acsdd graph diff --change guest-checkout --for c4 --json
+```
 
 ## Keeping capabilities in step with the profile
 
@@ -383,6 +432,57 @@ Unlike the other profile commands it won't auto-detect which profile you mean:
 the id is required, because guessing wrong here costs you files rather than an
 error message.
 
+### `acsdd change` and `acsdd graph`
+
+```bash
+acsdd change new "Guest checkout" --prd docs/prd/checkout.md  # start a change
+acsdd change list                                  # every change, applied ones marked
+acsdd change show guest-checkout                   # its record and changeset state
+acsdd change remove guest-checkout --force         # delete its artifacts
+
+acsdd graph context --json --for prd-import        # the contract an agent writes against
+acsdd graph apply --change guest-checkout --dry-run   # what it would do; writes nothing
+acsdd graph apply --change guest-checkout          # schema -> integrity -> atomic write
+acsdd graph validate --change guest-checkout --strict
+acsdd graph show                                   # counts by layer and type
+acsdd graph show --node cap:BE-001 --depth 2       # one node's neighbourhood
+acsdd graph diff --change guest-checkout --for c4  # NEW/MODIFIED/REMOVED/RELATED
+acsdd graph revisions                              # the applied history
+```
+
+The **engineering knowledge graph** is a typed, versioned record of how a change
+connects to your repository: requirement → capability → component → module, with
+provenance and evidence on every node. The refined spec, the C4 diagram and the
+implementation plan are meant to be *projections* of it, not parallel documents
+that drift from it.
+
+**acsdd does not read your PRD.** Interpreting one is judgement work, so it
+belongs to an agent following the packaged `graph-import` skill. acsdd's two
+jobs are publishing the contract and being the gate:
+
+- `graph context --json` hands the agent the complete node and edge vocabulary,
+  the allowed-edge matrix, every integrity rule and its severity, the changeset
+  format with a worked example, your profile's agreed facts, and the capability
+  catalog. The skill restates none of it, so nothing goes stale when the rules
+  change.
+- `graph apply` refuses anything that fails the schema or would leave the graph
+  internally inconsistent — a dangling edge, an edge pair the vocabulary
+  forbids, a cycle where the edge type forbids one, a requirement nothing
+  delivers. Applying the same changeset twice writes nothing and cuts no
+  revision, so re-running after a partial failure is safe.
+
+`--force` on `graph apply` means exactly one thing: proceed past a stale
+`base_revision` when the graph moved underneath your changeset. It never
+overrides an integrity error.
+
+`validate` exits 1 on errors; warnings are reported but don't block, and
+`--strict` is how you make them block in CI. Advisories — a low-confidence
+inference, an agent-authored node citing no file — never affect the exit code.
+
+The durable graph in `.acsdd/graph/` accumulates across features; each change's
+own requirements live in `.acsdd/changes/<id>/`, namespaced by the change id so
+two features can't collide on a name as ordinary as "checkout".
+
 ### `acsdd skill`
 
 ```bash
@@ -395,7 +495,7 @@ acsdd skill show profile-review     # dump the markdown to stdout
 acsdd skill remove profile-review --force   # uninstall it again
 ```
 
-Installs the agent skills acsdd ships into a repository. Currently three, one
+Installs the agent skills acsdd ships into a repository. Currently four, one
 per judgement-heavy step of the workflow:
 
 - **`profile-review`** — resolves a draft profile's `[REVIEW REQUIRED]` fields
@@ -404,14 +504,18 @@ per judgement-heavy step of the workflow:
 - **`capability-plan`** — decides which capabilities the finished profile
   implies, checks each candidate against your actual code, and updates the
   manifests a profile change has left stale.
+- **`graph-import`** — reads a PRD, expresses what it asks for as typed nodes
+  and edges, maps each requirement onto the capability that would deliver it,
+  and reports the gaps and ambiguities rather than inventing answers to them.
 - **`c4-component-diagram`** — reads a PRD or implementation plan against your
   repo and writes a C4 Component diagram of the architectural impact into
   `docs/architecture/`, classifying every component as new, modified, removed,
   or merely involved.
 
-The first two drive themselves off the matching command's `--json` output
-(`acsdd profile review --json`, `acsdd capability recommend --json`) rather than
-restating what the CLI knows, so neither goes stale when detection changes.
+The first three drive themselves off the matching command's `--json` output
+(`acsdd profile review --json`, `acsdd capability recommend --json`,
+`acsdd graph context --json`) rather than restating what the CLI knows, so none
+of them goes stale when the rules change.
 `c4-component-diagram` has no CLI partner — C4-PlantUML's conventions come from
 outside acsdd and don't move when detection does — but it still reads a
 finalized profile's `technology_stack` when there is one, and works in repos
@@ -469,18 +573,24 @@ acsdd-cli/
 │   ├── cli.py                     # click commands
 │   ├── update.py                  # self-update for the standalone binary
 │   ├── skills.py                  # installs the shipped agent skills
-│   ├── schemas/                   # Appendix A & B JSON Schemas
+│   ├── paths.py                   # the only place the .acsdd layout is spelled out
+│   ├── removal.py                 # the one deletion primitive, shared by every `remove`
+│   ├── schemas/                   # capability, profile, graph + changeset JSON Schemas
 │   ├── assets/                    # files installed into a consumer repo (skills)
 │   ├── capability/                # manifest loading + validation + generation + recommendation
 │   ├── catalog/                   # CATALOG.md generation
+│   ├── graph/                     # the knowledge graph: vocabulary, integrity, changesets
 │   └── profile/                   # repo discovery + profile review/validation/finalization
 ├── tests/                         # pytest suite
-└── .acsdd/capabilities/           # example data: 4 real capability manifests + docs
-    ├── CATALOG.md                 # generated — run `acsdd catalog build` to refresh
-    ├── _manifests/
-    │   ├── DB-001.yaml .. DB-004.yaml
-    └── database/
-        └── *.md                   # human/AI-readable procedure docs
+└── .acsdd/                        # example data, so every command runs against something real
+    ├── capabilities/              # 4 real capability manifests + procedure docs
+    │   ├── CATALOG.md             # generated — run `acsdd catalog build` to refresh
+    │   ├── _manifests/
+    │   │   └── DB-001.yaml .. DB-004.yaml
+    │   └── database/
+    │       └── *.md               # human/AI-readable procedure docs
+    └── graph/                     # a real graph of acsdd's own architecture
+        └── graph.json             # `acsdd graph show` works out of the box
 ```
 
 ## Building the standalone binary

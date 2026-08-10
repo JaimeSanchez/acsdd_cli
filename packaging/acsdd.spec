@@ -24,6 +24,16 @@ datas = [
         os.path.join(repo_root, "src", "acsdd", "schemas", "profile.schema.json"),
         "acsdd/schemas",
     ),
+    (
+        os.path.join(repo_root, "src", "acsdd", "schemas",
+                     "engineering-graph.schema.json"),
+        "acsdd/schemas",
+    ),
+    (
+        os.path.join(repo_root, "src", "acsdd", "schemas",
+                     "graph-changeset.schema.json"),
+        "acsdd/schemas",
+    ),
     # Agent skills installed into a consumer repo by `acsdd skill install`,
     # read via importlib.resources.files("acsdd.assets").
     (
@@ -40,6 +50,11 @@ datas = [
         os.path.join(repo_root, "src", "acsdd", "assets", "skills",
                      "c4-component-diagram", "SKILL.md"),
         "acsdd/assets/skills/c4-component-diagram",
+    ),
+    (
+        os.path.join(repo_root, "src", "acsdd", "assets", "skills",
+                     "graph-import", "SKILL.md"),
+        "acsdd/assets/skills/graph-import",
     ),
 ]
 datas += collect_data_files("jsonschema_specifications")

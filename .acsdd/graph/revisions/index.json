@@ -1,0 +1,14 @@
+{
+  "revisions": [
+    {
+      "id": "0001-1d3b0d9e",
+      "parent": null,
+      "changeset_id": "acsdd-self-map",
+      "title": "Map acsdd's own architecture",
+      "applied_at": "2026-08-10",
+      "node_count": 16,
+      "edge_count": 38,
+      "graph_hash": "1d3b0d9ef9856e86ea2f4b11d2e3d5c551288fb0846e3b47e90e42ffb04e462f"
+    }
+  ]
+}

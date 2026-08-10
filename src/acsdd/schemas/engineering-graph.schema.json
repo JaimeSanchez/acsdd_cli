@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ACSDD Engineering Knowledge Graph",
+  "description": "The durable repository graph (.acsdd/graph/graph.json) and per-change overlays. This schema owns *shape* only; which node types may be joined by which edge type is the allowed-edge matrix in acsdd.graph.vocabulary, checked by acsdd.graph.integrity — expressing it here would take an allOf of ten if/then clauses keyed on id prefixes, which would enforce a naming convention rather than a type relation. Unlike the capability and profile schemas this one uses local $defs: node, edge, evidence and source each repeat within the file, and inlining them at five sites produces a document no reviewer reads.",
+  "type": "object",
+  "required": ["graph"],
+  "properties": {
+    "graph": {
+      "type": "object",
+      "required": ["meta", "nodes", "edges"],
+      "properties": {
+        "meta": {
+          "type": "object",
+          "required": ["version", "generated_at"],
+          "properties": {
+            "version": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "description": "Document format version, not the acsdd version."
+            },
+            "generated_at": { "type": "string", "format": "date" },
+            "acsdd_version": { "type": "string" },
+            "revision": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9]{4}-[0-9a-f]{8}$",
+              "description": "Sequence number plus the leading 8 hex digits of graph_hash."
+            },
+            "graph_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        },
+        "nodes": {
+          "type": "array",
+          "description": "Sorted by id. An array rather than an id-keyed object so a line diff stays clean on insert.",
+          "items": { "$ref": "#/$defs/node" }
+        },
+        "edges": {
+          "type": "array",
+          "description": "Sorted by id.",
+          "items": { "$ref": "#/$defs/edge" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "lines": { "type": "string", "pattern": "^[0-9]+(-[0-9]+)?$" },
+        "quote": { "type": "string", "maxLength": 200 },
+        "note": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind", "ref", "at"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["agent", "detector", "human", "import"] },
+        "ref": { "type": "string", "minLength": 1 },
+        "at": {
+          "type": "string",
+          "format": "date",
+          "description": "A date, not a timestamp: a timestamp changes on every re-run and makes the diff pure noise."
+        },
+        "agent": { "type": "string" },
+        "acsdd_version": { "type": "string" }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z]{2,4}:[A-Za-z0-9][A-Za-z0-9._-]{1,63}$",
+          "description": "<prefix>:<local-part>, where the prefix names the node type."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Requirement",
+            "AcceptanceCriterion",
+            "BusinessRule",
+            "Constraint",
+            "Capability",
+            "Container",
+            "Component",
+            "Interface",
+            "DataEntity",
+            "QualityGate",
+            "ExternalSystem",
+            "Module",
+            "Test"
+          ]
+        },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "summary": { "type": "string", "maxLength": 500 },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "source": { "$ref": "#/$defs/source" },
+        "confidence": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "status": { "type": "string", "enum": ["proposed", "active", "deprecated"] }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": ["id", "type", "from", "to"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Derived as '<from>|<type>|<to>'. Never authored by hand."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "refines",
+            "governs",
+            "delivered_by",
+            "implemented_by",
+            "depends_on",
+            "exposes",
+            "owns",
+            "realized_in",
+            "verifies",
+            "contains"
+          ]
+        },
+        "from": {
+          "type": "string",
+          "pattern": "^[a-z]{2,4}:[A-Za-z0-9][A-Za-z0-9._-]{1,63}$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^[a-z]{2,4}:[A-Za-z0-9][A-Za-z0-9._-]{1,63}$"
+        },
+        "rationale": { "type": "string", "maxLength": 500 },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "source": { "$ref": "#/$defs/source" },
+        "confidence": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    }
+  }
+}

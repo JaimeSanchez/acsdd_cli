@@ -4,6 +4,8 @@ Subcommand groups:
   acsdd capability   validate / list / show / generate / recommend / remove
   acsdd catalog      build / verify
   acsdd profile      discover / validate / create / review / remove
+  acsdd graph        show / validate / apply / context / revisions
+  acsdd change       new / list / show / remove
   acsdd skill        list / install / show / remove
 
 Top-level commands:
@@ -23,12 +25,16 @@ from acsdd.capability.loader import iter_manifests, ManifestLoadError
 from acsdd.capability.remover import CapabilityNotFoundError, plan_removal
 from acsdd.capability.validator import validate_manifest, validate_catalog
 from acsdd.catalog.builder import build_catalog_markdown, CATEGORY_ORDER, CATEGORY_DOC_DIR
+from acsdd.graph.model import GraphLoadError
 from acsdd.paths import (
     ACSDD_DIR,
     DEFAULT_PROFILES_DIR,
     MANIFESTS_SUBDIR,
+    change_artifact_paths,
     profile_artifact_paths,
     resolve_capabilities_dir,
+    resolve_changes_dir,
+    resolve_graph_dir,
     resolve_profiles_dir,
 )
 from acsdd.profile.generator import find_unresolved_fields, finalize_profile
@@ -229,6 +235,13 @@ def _print_welcome(status: OnboardingStatus):
     _step(status.has_finalized_profile, "2. acsdd profile create           — finalize once REVIEW REQUIRED fields are resolved")
     _step(status.has_manifests, "3. acsdd capability generate --id ID --category CAT  — scaffold a capability manifest")
     _step(status.has_catalog, "4. acsdd capability validate && acsdd catalog build")
+    click.echo()
+    # Deliberately outside the checklist: the graph is per-change, not
+    # per-repo, so it must not gate `is_onboarded`. But a repo that finishes
+    # the four steps above would otherwise never hear that the per-change half
+    # exists, since this whole banner stops printing the moment it's onboarded.
+    click.secho("  Then, per change:  acsdd change new \"...\"  →  "
+                "acsdd graph context  →  acsdd graph apply", dim=True)
     click.echo()
     click.echo("See README.md#quickstart for details, or `acsdd COMMAND --help`.")
 
@@ -1306,6 +1319,821 @@ def skill_show(name: str):
     except SkillError as exc:
         click.secho(f"ERROR: {exc}", fg="red")
         sys.exit(1)
+
+
+# ---------------------------------------------------------------------
+# graph
+# ---------------------------------------------------------------------
+
+def _graph_repo(graph_dir: Optional[Path]):
+    from acsdd.graph.repository import JsonGraphRepository
+
+    return JsonGraphRepository(graph_dir or resolve_graph_dir(Path.cwd()))
+
+
+def _change_store(changes_dir: Optional[Path]):
+    from acsdd.graph.repository import ChangeStore
+
+    return ChangeStore(changes_dir or resolve_changes_dir(Path.cwd()))
+
+
+def _default_change_id(store) -> Optional[str]:
+    """The single *open* change, or None.
+
+    Open means it has a change.json and no applied.json. Deliberately returns
+    None rather than guessing whenever zero or more than one candidate exists —
+    the rule `_default_profile_path` follows, and for a sharper reason: a wrong
+    guess here silently writes a changeset into somebody else's change.
+    """
+    open_ids = store.open_ids()
+    return open_ids[0] if len(open_ids) == 1 else None
+
+
+def _resolve_change_id(store, change_id: Optional[str], as_json: bool = False,
+                       required: bool = True) -> Optional[str]:
+    if change_id:
+        return change_id
+    resolved = _default_change_id(store)
+    if resolved is not None:
+        click.echo(f"No --change given, using: {resolved}", err=as_json)
+        return resolved
+    if not required:
+        return None
+
+    candidates = store.open_ids()
+    if not candidates:
+        click.secho("ERROR: no --change given and this repo has no open changes.",
+                    fg="red")
+        click.echo("Start one with `acsdd change new \"Some title\"`.")
+    else:
+        click.secho("ERROR: no --change given and more than one change is open:",
+                    fg="red")
+        for candidate in candidates:
+            click.echo(f"  - {candidate}")
+        click.echo("Pass --change to say which.")
+    sys.exit(1)
+
+
+def _rule_context(change_id: Optional[str], capabilities_dir: Optional[Path],
+                  changeset=None):
+    """Build the RuleContext, reading manifests when a tree exists.
+
+    Absent manifests mean the catalog rules stay silent rather than reporting
+    every capability as uncatalogued — a report that cries wolf is one nobody
+    reads.
+
+    `changeset` supplies the node ids this change owns, which is what stops the
+    scoping rule holding a new change responsible for an older one's names.
+    """
+    from acsdd.graph.integrity import RuleContext
+
+    capabilities_dir = capabilities_dir or _default_capabilities_dir()
+    manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
+    manifests: Dict[str, Dict] = {}
+    if manifests_dir.is_dir():
+        manifests, load_errors = _load_all(manifests_dir)
+        for err in load_errors:
+            click.secho(f"WARNING: {err}", fg="yellow", err=True)
+
+    owned = None
+    if changeset is not None:
+        owned = frozenset(op.node.id for op in changeset.operations
+                          if op.node is not None)
+
+    return RuleContext(manifests=manifests, change_id=change_id, owned_node_ids=owned)
+
+
+def _load_change_overlay(store, change_id: Optional[str]):
+    """The graph a change's own changeset would produce, for validation.
+
+    A change's business-layer nodes only exist inside its changeset until it is
+    applied, so validating "the graph plus this change" means replaying the
+    changeset rather than reading a second graph file.
+    """
+    from acsdd.graph.changeset import ChangeSetError
+
+    if change_id is None or not store.changeset_path(change_id).is_file():
+        return None
+    try:
+        return store.load_changeset(change_id)
+    except (ChangeSetError, GraphLoadError) as exc:
+        click.secho(f"ERROR: {store.changeset_path(change_id)}: {exc}", fg="red")
+        sys.exit(1)
+
+
+@cli.group()
+def graph():
+    """Work with the engineering knowledge graph.
+
+    The graph is the canonical model of what this repository is and what a
+    change does to it: requirements, the capabilities that deliver them, the
+    components that implement those, and the modules and tests underneath. The
+    refined spec, the C4 diagram and the implementation plan are projections of
+    it rather than parallel sources of truth.
+
+    acsdd does not interpret a PRD itself — that is judgement work, and it
+    belongs to an agent following the packaged `graph-import` skill. What acsdd
+    owns is the vocabulary the agent writes against (`graph context`) and the
+    gate its output has to pass (`graph apply`).
+    """
+
+
+@graph.command("show")
+@click.option("--node", "node_id", default=None,
+              help="Show one node and its neighbourhood instead of a summary.")
+@click.option("--type", "node_type", default=None,
+              help="List only nodes of this type.")
+@click.option("--layer", type=click.Choice(["business", "engineering", "technical"]),
+              default=None, help="List only nodes in this layer.")
+@click.option("--depth", type=int, default=1, show_default=True,
+              help="How many hops to follow out from --node.")
+@click.option("--graph-dir", type=click.Path(path_type=Path), default=None,
+              help="Graph directory (default: auto-detected .acsdd/graph).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit the selection as JSON on stdout.")
+def graph_show(node_id: Optional[str], node_type: Optional[str], layer: Optional[str],
+               depth: int, graph_dir: Optional[Path], as_json: bool):
+    """Summarize the graph, or inspect one node's neighbourhood.
+
+    Informational: always exits 0, including when the graph is empty.
+    """
+    import json as _json
+
+    from acsdd.graph import report as graph_report
+    from acsdd.graph import vocabulary
+
+    repo = _graph_repo(graph_dir)
+    try:
+        current = repo.load()
+    except GraphLoadError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
+
+    selected = None
+    if node_type or layer:
+        selected = [n for n in sorted(current.nodes.values(), key=lambda n: n.id)
+                    if (node_type is None or n.type == node_type)
+                    and (layer is None or vocabulary.NODE_TYPES.get(n.type)
+                         and vocabulary.layer_of(n.type) == layer)]
+
+    if as_json:
+        if node_id:
+            node = current.nodes.get(node_id)
+            payload = {
+                "node": node.to_dict() if node else None,
+                "edges": [e.to_dict() for e in
+                          current.out_edges(node_id) + current.in_edges(node_id)],
+            }
+        elif selected is not None:
+            payload = {"nodes": [n.to_dict() for n in selected]}
+        else:
+            payload = {
+                "nodes": [current.nodes[i].to_dict() for i in sorted(current.nodes)],
+                "edges": [current.edges[i].to_dict() for i in sorted(current.edges)],
+            }
+        click.echo(_json.dumps({
+            "acsdd_version": __version__,
+            "graph_path": str(repo.graph_path),
+            "revision": current.revision,
+            **payload,
+        }, indent=2, sort_keys=False))
+        return
+
+    if node_id:
+        lines = graph_report.render_node_neighbourhood(current, node_id, max(depth, 0))
+    elif selected is not None:
+        heading = " ".join(filter(None, [layer, node_type, "nodes"]))
+        lines = graph_report.render_node_list(selected, heading)
+    else:
+        lines = graph_report.render_graph_summary(current)
+
+    for line in lines:
+        click.echo(line)
+
+
+@graph.command("validate")
+@click.option("--change", "change_id", default=None,
+              help="Also replay this change's changeset and validate the result.")
+@click.option("--strict", is_flag=True, default=False,
+              help="Exit 1 on warnings too, not only errors.")
+@click.option("--graph-dir", type=click.Path(path_type=Path), default=None,
+              help="Graph directory (default: auto-detected .acsdd/graph).")
+@click.option("--changes-dir", type=click.Path(path_type=Path), default=None,
+              help="Changes directory (default: auto-detected .acsdd/changes).")
+@click.option("--capabilities-dir", type=click.Path(path_type=Path), default=None,
+              help="Root capabilities directory (default: auto-detected).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit the report as JSON on stdout.")
+def graph_validate(change_id: Optional[str], strict: bool, graph_dir: Optional[Path],
+                   changes_dir: Optional[Path], capabilities_dir: Optional[Path],
+                   as_json: bool):
+    """Check the graph against every integrity rule.
+
+    Errors are what `graph apply` refuses to write: dangling edges, edge pairs
+    the vocabulary forbids, cycles where the edge type forbids them, a
+    Requirement nothing delivers. Warnings are reported and do not block —
+    --strict is how you make them block. Advisories never affect the exit code.
+
+    With --change, the change's changeset is replayed onto the graph first, so
+    what gets validated is the graph as that change would leave it.
+    """
+    import json as _json
+
+    from acsdd.graph import report as graph_report
+    from acsdd.graph.applier import schema_findings, validate_graph
+    from acsdd.graph.changeset import apply_operations
+
+    repo = _graph_repo(graph_dir)
+    store = _change_store(changes_dir)
+
+    if change_id is None:
+        change_id = _resolve_change_id(store, None, as_json=as_json, required=False)
+
+    try:
+        # The raw document is kept so the schema gets a look at it too: acsdd
+        # only ever writes documents the schema accepts, but it is not the only
+        # thing that can edit graph.json.
+        document = repo.load_document() if repo.exists() else None
+        current = repo.load()
+    except GraphLoadError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
+
+    changeset = _load_change_overlay(store, change_id)
+    if changeset is not None:
+        current = apply_operations(current, changeset).graph
+
+    report = validate_graph(
+        current, _rule_context(change_id, capabilities_dir, changeset=changeset))
+    report.errors[:0] = schema_findings(document)
+
+    if as_json:
+        click.echo(_json.dumps({
+            "acsdd_version": __version__,
+            "graph_path": str(repo.graph_path),
+            "change_id": change_id,
+            "strict": strict,
+            "node_count": len(current.nodes),
+            "edge_count": len(current.edges),
+            **report.to_dict(),
+        }, indent=2, sort_keys=False))
+    else:
+        for line in graph_report.render_integrity_report(report, current, strict=strict):
+            click.echo(line)
+
+    if report.errors or (strict and report.warnings):
+        sys.exit(1)
+
+
+@graph.command("apply")
+@click.argument("changeset_path", type=click.Path(exists=True, path_type=Path),
+                required=False)
+@click.option("--change", "change_id", default=None,
+              help="Apply this change's changeset.json instead of naming a path.")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Report what would change and write nothing.")
+@click.option("--force", is_flag=True, default=False,
+              help="Proceed even when the changeset's base_revision is stale. "
+                   "Never overrides an integrity error.")
+@click.option("--graph-dir", type=click.Path(path_type=Path), default=None,
+              help="Graph directory (default: auto-detected .acsdd/graph).")
+@click.option("--changes-dir", type=click.Path(path_type=Path), default=None,
+              help="Changes directory (default: auto-detected .acsdd/changes).")
+@click.option("--capabilities-dir", type=click.Path(path_type=Path), default=None,
+              help="Root capabilities directory (default: auto-detected).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit the outcome as JSON on stdout.")
+def graph_apply(changeset_path: Optional[Path], change_id: Optional[str], dry_run: bool,
+                force: bool, graph_dir: Optional[Path], changes_dir: Optional[Path],
+                capabilities_dir: Optional[Path], as_json: bool):
+    """Validate a changeset and write it into the graph.
+
+    Three gates, in order: the changeset must match its schema, the resulting
+    graph must have no integrity errors, and the changeset's base_revision must
+    match the graph's. Only the last is overridable, with --force.
+
+    Applying the same changeset twice writes nothing and cuts no revision, so
+    re-running after a partial failure is safe.
+
+    Unlike the `remove` commands this is not --force-gated in general: refusing
+    to write a validated changeset without a flag would make the whole
+    subsystem unusable unattended.
+    """
+    import json as _json
+
+    from acsdd.graph import report as graph_report
+    from acsdd.graph.applier import commit_apply, plan_apply
+    from acsdd.graph.changeset import ChangeSetError
+    from acsdd.graph.repository import load_changeset, load_changeset_document
+
+    repo = _graph_repo(graph_dir)
+    store = _change_store(changes_dir)
+
+    if changeset_path is None:
+        change_id = _resolve_change_id(store, change_id, as_json=as_json)
+        changeset_path = store.changeset_path(change_id)
+        if not changeset_path.is_file():
+            click.secho(f"ERROR: change '{change_id}' has no changeset at "
+                        f"{changeset_path}.", fg="red")
+            click.echo("An agent writes that file — see the `graph-import` skill, "
+                       "or run `acsdd graph context --json` to get its contract.")
+            sys.exit(1)
+
+    try:
+        document = load_changeset_document(changeset_path)
+        changeset = load_changeset(changeset_path)
+    except (ChangeSetError, GraphLoadError) as exc:
+        click.secho(f"ERROR: {changeset_path}: {exc}", fg="red")
+        sys.exit(1)
+
+    # An applied.json is the cheapest of the three idempotency layers: it
+    # catches a literal re-run before a single operation is replayed.
+    already = store.applied_revision(changeset.id) if store.exists(changeset.id) else None
+
+    try:
+        plan = plan_apply(repo, changeset, changeset_document=document,
+                          ctx=_rule_context(changeset.id, capabilities_dir,
+                                            changeset=changeset),
+                          already_applied_as=already)
+    except GraphLoadError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
+
+    committed = None
+    if not dry_run and plan.can_commit(force=force):
+        committed = commit_apply(repo, plan, force=force, acsdd_version=__version__)
+        if committed is not None and store.exists(changeset.id):
+            store.mark_applied(changeset.id, committed.id)
+
+    if as_json:
+        click.echo(_json.dumps({
+            "acsdd_version": __version__,
+            "graph_path": str(repo.graph_path),
+            "changeset_path": str(changeset_path),
+            "dry_run": dry_run,
+            "committed": committed.id if committed else None,
+            **plan.to_dict(),
+        }, indent=2, sort_keys=False))
+    else:
+        if already:
+            click.secho(f"NOTE: change '{changeset.id}' was already applied as "
+                        f"{already}.", fg="yellow")
+
+        for line in graph_report.render_apply_outcome(
+                plan.outcome, plan.revision, dry_run or not plan.can_commit(force=force)):
+            click.echo(line)
+
+        if plan.schema_errors:
+            click.echo()
+            click.secho("SCHEMA ERRORS", fg="red")
+            for err in plan.schema_errors:
+                click.echo(f"  - {err}")
+
+        if plan.integrity.errors or plan.integrity.warnings or plan.integrity.advisories:
+            click.echo()
+            for line in graph_report.render_integrity_report(plan.integrity, plan.outcome.graph):
+                click.echo(line)
+
+        if not plan.can_commit(force=force):
+            click.echo()
+            click.secho("REFUSED — nothing was written:", fg="red")
+            for reason in plan.blocked_reasons:
+                click.echo(f"  - {reason}")
+            if plan.base_is_stale and not plan.schema_errors and not plan.integrity.errors:
+                click.echo("Re-run with --force to apply it anyway, or regenerate "
+                           "the changeset against the current graph.")
+        elif committed is not None:
+            click.secho(f"Wrote {repo.graph_path} at revision {committed.id}.",
+                        fg="green")
+
+    if not plan.can_commit(force=force):
+        sys.exit(1)
+
+
+@graph.command("context")
+@click.option("--for", "purpose", type=click.Choice(["prd-import", "repo-map", "spec-check"]),
+              default="prd-import", show_default=True,
+              help="What the context is for. Decides which layers the subgraph carries.")
+@click.option("--change", "change_id", default=None,
+              help="Scope the payload to this change (default: the single open one).")
+@click.option("--profile", "profile_path", type=click.Path(exists=True, path_type=Path),
+              default=None,
+              help="Path to a profile YAML (default: auto-detected under ./.acsdd/profiles).")
+@click.option("--capabilities-dir", type=click.Path(path_type=Path), default=None,
+              help="Root capabilities directory (default: auto-detected).")
+@click.option("--graph-dir", type=click.Path(path_type=Path), default=None,
+              help="Graph directory (default: auto-detected .acsdd/graph).")
+@click.option("--changes-dir", type=click.Path(path_type=Path), default=None,
+              help="Changes directory (default: auto-detected .acsdd/changes).")
+@click.option("--max-nodes", type=int, default=None,
+              help="Cap the subgraph. An unbounded payload is an unbounded prompt.")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit the payload as JSON on stdout (what the graph-import skill consumes).")
+def graph_context(purpose: str, change_id: Optional[str], profile_path: Optional[Path],
+                  capabilities_dir: Optional[Path], graph_dir: Optional[Path],
+                  changes_dir: Optional[Path], max_nodes: Optional[int], as_json: bool):
+    """Everything an agent needs to write a changeset this repo will accept.
+
+    The node and edge vocabulary with the full allowed-edge matrix, every
+    integrity rule and its severity, the changeset format with the exact
+    commands to verify one, the profile's agreed facts, the capability catalog,
+    and the slice of the existing graph the purpose calls for.
+
+    This is the contract the packaged `graph-import` skill reads. It exists so
+    that skill never restates a rule table — restated rules go stale the first
+    time the table changes.
+
+    Informational: always exits 0.
+    """
+    import json as _json
+    import yaml as _yaml
+
+    from acsdd.graph.context import DEFAULT_MAX_NODES, build_context
+
+    repo = _graph_repo(graph_dir)
+    store = _change_store(changes_dir)
+    change_id = _resolve_change_id(store, change_id, as_json=as_json, required=False)
+
+    try:
+        current = repo.load()
+    except GraphLoadError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
+
+    change_payload = None
+    if change_id and store.exists(change_id):
+        try:
+            record = store.load_record(change_id)
+        except GraphLoadError as exc:
+            click.secho(f"ERROR: {exc}", fg="red")
+            sys.exit(1)
+        applied = store.applied_revision(change_id)
+        change_payload = {
+            "id": record.id,
+            "dir": str(store.change_dir(change_id)),
+            "title": record.title,
+            "prd_path": record.prd_path,
+            "status": "applied" if applied else "open",
+            "applied_revision": applied,
+            "changeset_path": str(store.changeset_path(change_id)),
+            "id_prefix": f"{change_id}.",
+        }
+
+    # The profile is optional: a repo can import a PRD before it has one, and
+    # the payload says so via profile: null rather than refusing.
+    profile_data = None
+    if profile_path is None:
+        profile_path = _default_profile_path()
+        if profile_path is not None:
+            click.echo(f"No --profile given, using: {profile_path}", err=as_json)
+    if profile_path is not None:
+        try:
+            loaded = _yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
+        except _yaml.YAMLError as exc:
+            click.secho(f"ERROR: {profile_path} is not parseable YAML:", fg="red")
+            click.echo(f"  - {exc}")
+            sys.exit(1)
+        profile_data = loaded.get("profile") or {}
+
+    capabilities_dir = capabilities_dir or _default_capabilities_dir()
+    manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
+    manifests: Dict[str, Dict] = {}
+    if manifests_dir.is_dir():
+        manifests, load_errors = _load_all(manifests_dir)
+        for err in load_errors:
+            click.secho(f"WARNING: {err}", fg="yellow", err=True)
+
+    payload = build_context(
+        current, str(repo.graph_path), purpose=purpose, change=change_payload,
+        profile=profile_data,
+        profile_path=str(profile_path) if profile_path else None,
+        manifests=manifests, max_nodes=max_nodes or DEFAULT_MAX_NODES)
+
+    if as_json:
+        click.echo(_json.dumps({"acsdd_version": __version__, **payload.to_dict()},
+                               indent=2, sort_keys=False))
+        return
+
+    # A --json-only command would be the first in this tool and would be
+    # undebuggable by hand, so there is a human mode — deliberately a summary,
+    # since the whole point of the payload is that it is too much to read.
+    data = payload.to_dict()
+    click.secho(f"Context for '{purpose}'", bold=True)
+    click.echo(f"  graph:        {data['graph_path']} "
+               f"({data['counts']['nodes']} nodes, {data['counts']['edges']} edges, "
+               f"revision {data['graph_revision'] or 'none'})")
+    click.echo(f"  change:       {change_id or 'none'}")
+    if data["profile"]:
+        click.echo(f"  profile:      {data['profile']['id']} "
+                   f"({data['profile']['status']}, "
+                   f"{'usable' if data['profile']['usable'] else 'NOT usable'})")
+    else:
+        click.echo("  profile:      none")
+    click.echo(f"  capabilities: {len(data['capabilities'])}")
+    click.echo(f"  vocabulary:   {len(data['vocabulary']['node_types'])} node types, "
+               f"{len(data['vocabulary']['edge_types'])} edge types")
+    click.echo(f"  rules:        {len(data['rules'])}")
+    click.echo(f"  subgraph:     {data['subgraph']['node_count']} nodes"
+               f"{' (truncated)' if data['subgraph']['truncated'] else ''}")
+    click.echo()
+    click.echo("Re-run with --json for the payload an agent consumes.")
+
+
+@graph.command("diff")
+@click.argument("changeset_path", type=click.Path(exists=True, path_type=Path),
+                required=False)
+@click.option("--change", "change_id", default=None,
+              help="Diff this change's changeset.json (default: the single open one).")
+@click.option("--for", "projection", type=click.Choice(["raw", "c4"]), default="raw",
+              show_default=True,
+              help="'c4' classifies components as new/modified/removed/related.")
+@click.option("--graph-dir", type=click.Path(path_type=Path), default=None,
+              help="Graph directory (default: auto-detected .acsdd/graph).")
+@click.option("--changes-dir", type=click.Path(path_type=Path), default=None,
+              help="Changes directory (default: auto-detected .acsdd/changes).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit the diff as JSON on stdout.")
+def graph_diff(changeset_path: Optional[Path], change_id: Optional[str], projection: str,
+               graph_dir: Optional[Path], changes_dir: Optional[Path], as_json: bool):
+    """Show what a changeset would do to the graph, without applying it.
+
+    With `--for c4`, classifies every affected component as NEW, MODIFIED,
+    REMOVED or RELATED and takes the one-hop closure around them — the input
+    the packaged `c4-component-diagram` skill draws from. Those four states are
+    computed from the changeset, never stored on a node, so they cannot go
+    stale.
+
+    Informational: always exits 0, including when the changeset would be
+    refused. `graph apply --dry-run` is the command that tells you that.
+    """
+    import json as _json
+
+    from acsdd.graph import report as graph_report
+    from acsdd.graph.changeset import ChangeSetError, apply_operations
+    from acsdd.graph.project_c4 import classification_report
+    from acsdd.graph.repository import load_changeset
+
+    repo = _graph_repo(graph_dir)
+    store = _change_store(changes_dir)
+
+    if changeset_path is None:
+        change_id = _resolve_change_id(store, change_id, as_json=as_json)
+        changeset_path = store.changeset_path(change_id)
+        if not changeset_path.is_file():
+            click.secho(f"ERROR: change '{change_id}' has no changeset at "
+                        f"{changeset_path}.", fg="red")
+            sys.exit(1)
+
+    try:
+        before = repo.load()
+        changeset = load_changeset(changeset_path)
+    except (ChangeSetError, GraphLoadError) as exc:
+        click.secho(f"ERROR: {changeset_path}: {exc}", fg="red")
+        sys.exit(1)
+
+    outcome = apply_operations(before, changeset)
+
+    if projection == "c4":
+        requirements = sorted(
+            op.node.id for op in changeset.operations
+            if op.node is not None and op.node.type == "Requirement")
+        report = classification_report(outcome, before, requirements=requirements)
+        if as_json:
+            click.echo(_json.dumps({
+                "acsdd_version": __version__,
+                "changeset_path": str(changeset_path),
+                "changeset_id": changeset.id,
+                **report,
+            }, indent=2, sort_keys=False))
+            return
+        for line in graph_report.render_c4_classification(report):
+            click.echo(line)
+        return
+
+    if as_json:
+        click.echo(_json.dumps({
+            "acsdd_version": __version__,
+            "changeset_path": str(changeset_path),
+            "changeset_id": changeset.id,
+            **outcome.to_dict(),
+        }, indent=2, sort_keys=False))
+        return
+
+    for line in graph_report.render_apply_outcome(outcome, None, dry_run=True):
+        click.echo(line)
+
+
+@graph.command("revisions")
+@click.option("--graph-dir", type=click.Path(path_type=Path), default=None,
+              help="Graph directory (default: auto-detected .acsdd/graph).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit the log as JSON on stdout.")
+def graph_revisions(graph_dir: Optional[Path], as_json: bool):
+    """List the graph's revision history, oldest first."""
+    import json as _json
+
+    from acsdd.graph import report as graph_report
+
+    repo = _graph_repo(graph_dir)
+    try:
+        log = repo.revisions()
+    except GraphLoadError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
+
+    if as_json:
+        click.echo(_json.dumps({
+            "acsdd_version": __version__,
+            "graph_path": str(repo.graph_path),
+            "revisions": [r.to_dict() for r in log],
+        }, indent=2, sort_keys=False))
+        return
+
+    for line in graph_report.render_revisions(log):
+        click.echo(line)
+
+
+# ---------------------------------------------------------------------
+# change
+# ---------------------------------------------------------------------
+
+@cli.group()
+def change():
+    """Manage the per-change overlays the graph is edited through.
+
+    A change owns a PRD, the business-layer nodes derived from it, and the
+    changeset those become against the repository graph. Keeping them per
+    change is what lets the durable graph accumulate engineering and technical
+    knowledge across features instead of rediscovering it for every PRD.
+    """
+
+
+@change.command("new")
+@click.argument("title")
+@click.option("--id", "change_id", default=None,
+              help="Change id (default: a slug of TITLE). Becomes the directory name.")
+@click.option("--prd", "prd_path", type=click.Path(exists=True, path_type=Path),
+              default=None, help="The PRD this change is derived from.")
+@click.option("--changes-dir", type=click.Path(path_type=Path), default=None,
+              help="Changes directory (default: auto-detected .acsdd/changes).")
+@click.option("--force", is_flag=True, default=False,
+              help="Overwrite an existing change record with this id.")
+def change_new(title: str, change_id: Optional[str], prd_path: Optional[Path],
+               changes_dir: Optional[Path], force: bool):
+    """Start a change: create .acsdd/changes/<id>/change.json.
+
+    The id also namespaces the change's business-layer node ids
+    (req:<id>.<slug>), which is what stops two changes colliding on a name as
+    ordinary as "checkout".
+    """
+    import re as _re
+    from datetime import datetime, timezone
+
+    from acsdd.graph.repository import ChangeRecord
+
+    store = _change_store(changes_dir)
+
+    if change_id is None:
+        change_id = _re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:64]
+    if not _re.match(r"^[a-z0-9][a-z0-9-]{2,63}$", change_id):
+        click.secho(f"ERROR: '{change_id}' is not a usable change id.", fg="red")
+        click.echo("Ids are lowercase letters, digits and hyphens, 3-64 characters. "
+                   "Pass --id to set one explicitly.")
+        sys.exit(1)
+
+    record_path = store.record_path(change_id)
+    if record_path.exists() and not force:
+        click.secho(f"ERROR: change '{change_id}' already exists — re-run with "
+                    f"--force to overwrite:", fg="red")
+        click.echo(f"  - {record_path}")
+        sys.exit(1)
+
+    store.save_record(ChangeRecord(
+        id=change_id, title=title,
+        created_at=datetime.now(timezone.utc).date().isoformat(),
+        prd_path=str(prd_path) if prd_path else None))
+
+    click.secho(f"Created {record_path}", fg="green")
+    click.echo()
+    click.echo("Next:")
+    click.echo(f"  1. acsdd graph context --json --for prd-import --change {change_id}")
+    click.echo(f"  2. an agent writes {store.changeset_path(change_id)}")
+    click.echo(f"  3. acsdd graph apply --change {change_id} --dry-run")
+    if not is_installed("graph-import", Path.cwd()):
+        click.echo()
+        click.secho("Tip: `acsdd skill install` drops the graph-import skill into "
+                    "this repo, which can do step 2 for you.", dim=True)
+
+
+@change.command("list")
+@click.option("--changes-dir", type=click.Path(path_type=Path), default=None,
+              help="Changes directory (default: auto-detected .acsdd/changes).")
+def change_list(changes_dir: Optional[Path]):
+    """List every change in this repository, open ones marked."""
+    store = _change_store(changes_dir)
+    ids = store.list_ids()
+
+    if not ids:
+        click.echo("No changes yet. Start one with `acsdd change new \"Some title\"`.")
+        return
+
+    for change_id in ids:
+        applied = store.applied_revision(change_id)
+        mark = "[x]" if applied else "[ ]"
+        try:
+            title = store.load_record(change_id).title
+        except GraphLoadError:
+            title = "(unreadable change.json)"
+        suffix = f"   applied as {applied}" if applied else ""
+        click.secho(f"  {mark} {change_id}", fg="green" if applied else "yellow")
+        click.echo(f"        {title}{suffix}")
+
+
+@change.command("show")
+@click.argument("change_id", required=False)
+@click.option("--changes-dir", type=click.Path(path_type=Path), default=None,
+              help="Changes directory (default: auto-detected .acsdd/changes).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit the change as JSON on stdout.")
+def change_show(change_id: Optional[str], changes_dir: Optional[Path], as_json: bool):
+    """Show one change: its record, its changeset, and whether it landed."""
+    import json as _json
+
+    store = _change_store(changes_dir)
+    change_id = _resolve_change_id(store, change_id, as_json=as_json)
+
+    if not store.exists(change_id):
+        click.secho(f"ERROR: no change '{change_id}' in {store.changes_dir}.", fg="red")
+        sys.exit(1)
+
+    try:
+        record = store.load_record(change_id)
+    except GraphLoadError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
+
+    changeset = _load_change_overlay(store, change_id)
+    applied = store.applied_revision(change_id)
+
+    if as_json:
+        click.echo(_json.dumps({
+            "acsdd_version": __version__,
+            "change": record.to_dict()["change"],
+            "changeset_path": str(store.changeset_path(change_id)),
+            "has_changeset": changeset is not None,
+            "operation_count": len(changeset.operations) if changeset else 0,
+            "applied_revision": applied,
+        }, indent=2, sort_keys=False))
+        return
+
+    click.secho(f"{record.id}", bold=True)
+    click.echo(f"  {record.title}")
+    click.echo(f"  created: {record.created_at}")
+    if record.prd_path:
+        click.echo(f"  prd:     {record.prd_path}")
+    click.echo(f"  status:  {'applied as ' + applied if applied else 'open'}")
+    if changeset is None:
+        click.echo("  changeset: none written yet")
+    else:
+        click.echo(f"  changeset: {len(changeset.operations)} operation(s), "
+                   f"base {changeset.base_revision or 'any'}")
+
+
+@change.command("remove")
+@click.argument("change_id")
+@click.option("--changes-dir", type=click.Path(path_type=Path), default=None,
+              help="Changes directory (default: auto-detected .acsdd/changes).")
+@click.option("--force", is_flag=True, default=False,
+              help="Actually delete. Without it, the files are only listed.")
+def change_remove(change_id: str, changes_dir: Optional[Path], force: bool):
+    """Delete every artifact belonging to CHANGE_ID.
+
+    CHANGE_ID is required and never auto-detected: the read commands guess
+    because guessing wrong there costs an error message, and here it costs
+    files.
+
+    Removing an applied change does not revert it — the graph already holds
+    what it wrote, and `graph.json` is history you undo with git, not with this.
+    """
+    store = _change_store(changes_dir)
+    existing = [p for p in change_artifact_paths(store.changes_dir, change_id)
+                if p.exists()]
+    if not existing:
+        click.secho(f"No artifacts for change '{change_id}' in {store.changes_dir}",
+                    fg="red")
+        sys.exit(1)
+
+    if store.applied_revision(change_id):
+        click.secho(f"NOTE: '{change_id}' has been applied — removing it does not "
+                    f"revert the graph.", fg="yellow")
+
+    _require_force_to_remove(existing, force)
+
+    # protect= the changes root: a directory that vanished with its last change
+    # would read as "this repo never had a graph". remove_paths prunes only
+    # immediate parents, so the emptied <change-id>/ goes and the root stays.
+    for path in remove_paths(existing, protect=[store.changes_dir]):
+        click.secho(f"Removed {path}", fg="green")
 
 
 if __name__ == "__main__":
