@@ -295,6 +295,31 @@ def _load_all(manifests_dir: Path) -> tuple[Dict[str, Dict], list[str]]:
     return manifests, load_errors
 
 
+def _require_manifests_dir(manifests_dir: Path) -> None:
+    """Exit 1 with a next step when a command that *reads* manifests has no
+    tree to read.
+
+    `capability generate` is the only command that creates a capabilities tree;
+    every other one consumes it. Auto-detection falls back to
+    ./.acsdd/capabilities whether or not that exists, so without this guard a
+    repo that has only been through `profile discover` reaches the read as if
+    the tree were merely empty — which for `catalog build` meant writing
+    CATALOG.md into a directory that isn't there, and a raw FileNotFoundError
+    traceback out of the CLI.
+
+    An existing-but-empty `_manifests/` is a different thing and stays legal:
+    `removal.py` deliberately keeps the directory alive when its last manifest
+    goes, so "zero capabilities" has to remain a buildable state.
+    """
+    if manifests_dir.is_dir():
+        return
+    click.secho(f"No manifests directory found at {manifests_dir}", fg="red")
+    click.echo("This repo has no capabilities yet. Run `acsdd capability recommend` "
+               "to see which ones its profile implies, then `acsdd capability "
+               "generate --id ID --category CAT` to create one.")
+    sys.exit(1)
+
+
 @capability.command("validate")
 @click.argument("path", type=click.Path(exists=True, path_type=Path), required=False)
 @click.option("--manifests-dir", type=click.Path(path_type=Path), default=None,
@@ -320,9 +345,7 @@ def capability_validate(path: Optional[Path], manifests_dir: Optional[Path]):
             click.echo(f"  - {err}")
         sys.exit(1)
 
-    if not manifests_dir.is_dir():
-        click.secho(f"No manifests directory found at {manifests_dir}", fg="red")
-        sys.exit(1)
+    _require_manifests_dir(manifests_dir)
 
     manifests, load_errors = _load_all(manifests_dir)
     any_fail = bool(load_errors)
@@ -762,6 +785,7 @@ def catalog_build(capabilities_dir: Optional[Path], out: Optional[Path]):
     is generated — don't hand-edit it, since a rebuild will overwrite it."""
     capabilities_dir = capabilities_dir or _default_capabilities_dir()
     manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
+    _require_manifests_dir(manifests_dir)
     out = out or capabilities_dir / "CATALOG.md"
 
     manifests, load_errors = _load_all(manifests_dir)
@@ -769,6 +793,9 @@ def catalog_build(capabilities_dir: Optional[Path], out: Optional[Path]):
         click.secho(f"WARN  {err}", fg="yellow")
 
     md = build_catalog_markdown(manifests, docs_root=capabilities_dir, manifests_root=manifests_dir)
+    # The default `out` sits inside a tree the guard above proved exists; this
+    # is for an explicit --out pointing somewhere that doesn't yet.
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(md, encoding="utf-8")
     click.secho(f"Wrote {out} ({len(manifests)} capabilities)", fg="green")
 
@@ -781,6 +808,11 @@ def catalog_verify(capabilities_dir: Optional[Path]):
     capabilities_dir = capabilities_dir or _default_capabilities_dir()
     manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
     catalog_path = capabilities_dir / "CATALOG.md"
+
+    # Before the staleness check, not after: with no tree at all the missing
+    # CATALOG.md below would tell the user to run `catalog build`, which is the
+    # one command that cannot help them here.
+    _require_manifests_dir(manifests_dir)
 
     manifests, load_errors = _load_all(manifests_dir)
     any_fail = bool(load_errors)

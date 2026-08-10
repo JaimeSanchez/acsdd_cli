@@ -158,3 +158,67 @@ def test_build_catalog_markdown_empty_categories_marked_none_yet():
     )
     assert "*(none yet)*" in md
     assert "AA-001" in md
+
+
+# --- Commands that read a capabilities tree that isn't there -------------
+#
+# A repo that has been through `profile discover` and no further has
+# .acsdd/profiles/ but no .acsdd/capabilities/. Auto-detection still resolves
+# to the latter, so every reader has to say so rather than behaving as if the
+# tree were merely empty — `catalog build` used to write CATALOG.md into a
+# directory that didn't exist and raise FileNotFoundError at the user.
+
+@pytest.mark.parametrize("command", [
+    ["catalog", "build"],
+    ["catalog", "verify"],
+    ["capability", "validate"],
+])
+def test_readers_refuse_cleanly_when_there_is_no_capabilities_tree(command, tmp_path, monkeypatch):
+    from click.testing import CliRunner
+
+    from acsdd.cli import cli
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".acsdd" / "profiles").mkdir(parents=True)
+
+    result = CliRunner().invoke(cli, command)
+
+    assert result.exit_code == 1, result.output
+    assert result.exception is None or isinstance(result.exception, SystemExit), result.output
+    assert "No manifests directory found" in result.output
+    # Points at the command that *creates* a tree. `catalog verify` used to
+    # send people to `catalog build` here, which is the one command that
+    # cannot help.
+    assert "capability generate" in result.output
+    assert not (tmp_path / ".acsdd" / "capabilities").exists(), \
+        "a read-only command must not conjure a capabilities tree"
+
+
+def test_catalog_build_still_works_on_an_empty_manifests_dir(tmp_path, monkeypatch):
+    """`removal.py` keeps _manifests/ alive when its last manifest goes, so
+    zero capabilities has to stay a buildable state."""
+    from click.testing import CliRunner
+
+    from acsdd.cli import cli
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".acsdd" / "capabilities" / "_manifests").mkdir(parents=True)
+
+    result = CliRunner().invoke(cli, ["catalog", "build"])
+
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / ".acsdd" / "capabilities" / "CATALOG.md").exists()
+
+
+def test_catalog_build_creates_the_parent_of_an_explicit_out(tmp_path, monkeypatch):
+    from click.testing import CliRunner
+
+    from acsdd.cli import cli
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".acsdd" / "capabilities" / "_manifests").mkdir(parents=True)
+
+    result = CliRunner().invoke(cli, ["catalog", "build", "--out", "build/docs/CATALOG.md"])
+
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "build" / "docs" / "CATALOG.md").exists()
