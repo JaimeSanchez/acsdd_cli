@@ -32,6 +32,14 @@ arm64 only — no Intel Mac binary; GitHub's hosted Intel macOS runners have
 become too unreliable to build on). Windows isn't supported yet. On an
 unsupported combination, install from source instead (below).
 
+**Linux binaries need glibc 2.38 or newer** — Ubuntu 24.04+, Fedora 39+,
+Debian 13+. They bundle a Python built on `ubuntu-24.04`, which links against
+that image's libc. On an older distro (Debian 12, Ubuntu 22.04, RHEL/Rocky 9,
+Amazon Linux 2023) they fail at startup with a
+`libpython3.11.so.1.0: version 'GLIBC_2.38' not found` loader error rather than
+anything actionable. Install from source there — the source install has no
+glibc floor beyond your own Python's.
+
 To update an existing binary install to the latest release in place:
 
 ```bash
