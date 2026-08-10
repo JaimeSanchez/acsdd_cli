@@ -15,9 +15,11 @@ from acsdd.skills import (
     SKILLS,
     SkillError,
     install_skill,
+    installed_targets,
     is_installed,
     read_skill,
     remove_skill,
+    resolve_targets,
     skill_names,
 )
 
@@ -67,22 +69,34 @@ def test_skill_frontmatter_is_wellformed(name):
     assert "Use when" in parsed["description"]
 
 
-def test_install_writes_every_shipped_skill_into_the_repo(tmp_path):
+def test_install_writes_every_shipped_skill_for_every_agent(tmp_path):
+    # The whole point of the target registry: a skill installed for one agent
+    # and invisible to the next is the failure being prevented here.
     for name in SKILLS:
-        result = install_skill(name, tmp_path)
-        assert result.written is True
-        assert result.path == tmp_path / ".claude" / "skills" / name / "SKILL.md"
-        assert result.path.read_text() == read_skill(name)
+        results = install_skill(name, tmp_path)
+        assert [r.target for r in results] == ["agents", "claude"]
+        assert all(r.written for r in results)
+
+        for root in (".agents", ".claude"):
+            path = tmp_path / root / "skills" / name / "SKILL.md"
+            assert path.read_text() == read_skill(name)
 
 
-def test_install_writes_the_skill_into_the_repo(tmp_path):
-    assert is_installed("profile-review", tmp_path) is False
+def test_install_can_be_narrowed_to_one_agent(tmp_path):
+    results = install_skill("profile-review", tmp_path, targets=["agents"])
+    assert [r.target for r in results] == ["agents"]
+    assert (tmp_path / ".agents" / "skills" / "profile-review" / "SKILL.md").exists()
+    assert not (tmp_path / ".claude").exists()
 
-    result = install_skill("profile-review", tmp_path)
-    assert result.written is True
-    assert result.path == tmp_path / ".claude" / "skills" / "profile-review" / "SKILL.md"
-    assert result.path.read_text() == read_skill("profile-review")
     assert is_installed("profile-review", tmp_path) is True
+    assert is_installed("profile-review", tmp_path, targets=["claude"]) is False
+    assert installed_targets("profile-review", tmp_path) == ["agents"]
+
+
+def test_install_rejects_an_unknown_agent_target():
+    with pytest.raises(SkillError) as exc:
+        resolve_targets(["emacs"])
+    assert "unknown agent target 'emacs'" in str(exc.value)
 
 
 def test_install_refuses_to_clobber_without_force(tmp_path):
@@ -90,10 +104,15 @@ def test_install_refuses_to_clobber_without_force(tmp_path):
     target.parent.mkdir(parents=True)
     target.write_text("hand-edited\n")
 
-    assert install_skill("profile-review", tmp_path).written is False
+    results = {r.target: r for r in install_skill("profile-review", tmp_path)}
+    assert results["claude"].written is False
     assert target.read_text() == "hand-edited\n"
+    # One blocked target must not cost the others theirs — a repo with a
+    # hand-edited .claude/ should still end up readable by every other agent.
+    assert results["agents"].written is True
 
-    assert install_skill("profile-review", tmp_path, force=True).written is True
+    forced = {r.target: r for r in install_skill("profile-review", tmp_path, force=True)}
+    assert forced["claude"].written is True
     assert target.read_text() != "hand-edited\n"
 
 
@@ -130,11 +149,28 @@ def test_skill_list_shows_shipped_skills_and_install_state(tmp_path):
     assert "[ ] capability-plan" in before.output
     assert "[ ] c4-component-diagram" in before.output
 
+    # Both agent conventions are named, so a reader can see which agents a
+    # given repo's skills are actually reachable from.
+    assert ".agents/skills/profile-review/SKILL.md" in before.output
+    assert ".claude/skills/profile-review/SKILL.md" in before.output
+    assert "Codex" in before.output and "Claude Code" in before.output
+
     runner.invoke(cli, ["skill", "install", "--dir", str(tmp_path)])
     after = runner.invoke(cli, ["skill", "list", "--dir", str(tmp_path)])
     assert "[x] profile-review" in after.output
     assert "[x] capability-plan" in after.output
     assert "[x] c4-component-diagram" in after.output
+
+
+def test_skill_list_marks_a_partially_installed_skill_per_agent(tmp_path):
+    install_skill("profile-review", tmp_path, targets=["claude"])
+    output = CliRunner().invoke(cli, ["skill", "list", "--dir", str(tmp_path)]).output
+
+    # Installed somewhere, so the skill reads as present...
+    assert "[x] profile-review" in output
+    # ...but the per-agent lines still show Codex/Cursor/Kimi can't see it.
+    assert "[ ] .agents/skills/profile-review/SKILL.md" in output
+    assert "[x] .claude/skills/profile-review/SKILL.md" in output
 
 
 def test_skill_show_dumps_the_markdown():
@@ -144,8 +180,9 @@ def test_skill_show_dumps_the_markdown():
 
 
 def test_remove_skill_reports_a_no_op_when_not_installed(tmp_path):
-    result = remove_skill("profile-review", tmp_path)
-    assert result.removed is False
+    results = remove_skill("profile-review", tmp_path)
+    assert [r.target for r in results] == ["agents", "claude"]
+    assert not any(r.removed for r in results)
 
 
 def test_remove_skill_raises_on_an_unknown_name(tmp_path):
@@ -179,15 +216,41 @@ def test_skill_remove_refuses_without_force(tmp_path):
     assert is_installed("profile-review", tmp_path) is True
 
 
-def test_skill_remove_leaves_the_claude_skills_dir_in_place(tmp_path):
-    # .claude/skills/ is Claude Code's, not acsdd's — pruning it would delete
-    # other tools' skills along with ours.
+def test_skill_remove_leaves_the_agent_skills_dirs_in_place(tmp_path):
+    # Neither .claude/skills/ nor .agents/skills/ is acsdd's — pruning either
+    # would delete other tools' skills along with ours.
     runner = CliRunner()
     runner.invoke(cli, ["skill", "install", "--dir", str(tmp_path)])
     runner.invoke(cli, ["skill", "remove", "profile-review", "--dir", str(tmp_path), "--force"])
 
-    assert (tmp_path / ".claude" / "skills").is_dir()
-    assert not (tmp_path / ".claude" / "skills" / "profile-review").exists()
+    for root in (".agents", ".claude"):
+        assert (tmp_path / root / "skills").is_dir()
+        assert not (tmp_path / root / "skills" / "profile-review").exists()
+
+
+def test_skill_remove_clears_every_agent_target(tmp_path):
+    runner = CliRunner()
+    runner.invoke(cli, ["skill", "install", "--dir", str(tmp_path)])
+
+    result = runner.invoke(cli, [
+        "skill", "remove", "profile-review", "--dir", str(tmp_path), "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert installed_targets("profile-review", tmp_path) == []
+    # The other skills are untouched by a single-skill removal.
+    assert installed_targets("capability-plan", tmp_path) == ["agents", "claude"]
+
+
+def test_skill_remove_can_be_narrowed_to_one_agent(tmp_path):
+    runner = CliRunner()
+    runner.invoke(cli, ["skill", "install", "--dir", str(tmp_path)])
+
+    result = runner.invoke(cli, [
+        "skill", "remove", "profile-review", "--dir", str(tmp_path),
+        "--agent", "claude", "--force",
+    ])
+    assert result.exit_code == 0, result.output
+    assert installed_targets("profile-review", tmp_path) == ["agents"]
 
 
 def test_skill_remove_on_an_uninstalled_skill_exits_1(tmp_path):

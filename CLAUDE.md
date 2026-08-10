@@ -47,9 +47,10 @@ acsdd capability generate --id BE-001 --category BE
 # same command reports manifests whose constraints/gates the profile outgrew.
 acsdd capability recommend
 
-# Install the packaged Claude Code skills that automate the two judgement
-# steps (profile-review, capability-plan)
+# Install the packaged agent skills (profile-review, capability-plan,
+# c4-component-diagram) into both .agents/skills/ and .claude/skills/
 acsdd skill install
+acsdd skill install --agent claude   # or narrow it to one convention
 
 # Undo any of the above. Every `remove` lists what it would delete and does
 # nothing without --force (see "Removal" under Architecture).
@@ -82,9 +83,9 @@ to so it stays testable without invoking Click.
 
 **`paths.py`** — the single authority on where acsdd's artifacts live inside
 a consumer repo. Everything it writes goes under one hidden `.acsdd/` root
-(`.acsdd/profiles/`, `.acsdd/capabilities/`); the sole exception is
-`.claude/skills/`, which is Claude Code's convention and stays put (see
-`skills.py`). `resolve_profiles_dir` / `resolve_capabilities_dir` each return
+(`.acsdd/profiles/`, `.acsdd/capabilities/`); the sole exceptions are
+`.agents/skills/` and `.claude/skills/`, which are other agents' conventions and
+stay put (see `skills.py`). `resolve_profiles_dir` / `resolve_capabilities_dir` each return
 `(dir, is_legacy)`, falling back to the pre-`.acsdd` locations (`acsdd/profiles`,
 top-level `capabilities/`) so a repo onboarded before the move keeps working —
 but nothing ever *writes* to a legacy path again. **Don't spell either layout
@@ -236,9 +237,26 @@ fails if manifests and catalog have drifted, or if any manifest is invalid.
   exits **0** when it finds unresolved fields — it's informational, not a gate.
 
 **`skills.py` + `assets/`** — backs `acsdd skill list/install/show/remove`,
-which copies the Claude Code skills acsdd ships into a consumer repo's
-`.claude/skills/`. `assets/claude/skills/<name>/SKILL.md` mirrors the
-destination layout so installing is a straight copy. Three skills ship, one per
+which copies the agent skills acsdd ships into a consumer repo.
+`assets/skills/<name>/SKILL.md` mirrors the destination layout so installing is
+a straight copy.
+
+**Nothing about a skill is vendor-specific, and the layout should keep saying
+so.** A SKILL.md is YAML frontmatter (`name`, `description`) over markdown
+procedure that shells out to `acsdd ... --json` — every agent can run that.
+Only the *install path* differs, which is what `AGENT_TARGETS` holds:
+`.agents/skills/` is the shared project convention (Codex, Cursor, Kimi CLI,
+Gemini CLI, Copilot, OpenCode, Amp, Cline, Warp) and `.claude/skills/` is Claude
+Code's own. `install`/`remove` write and clear **both** by default; `--agent
+agents|claude|all` narrows it. The two copies are independent files, not a
+symlink pair — symlinks are unreliable on Windows and under
+`core.symlinks=false`, and the packaged asset is the source of truth for both,
+so `--force` re-syncs rather than merges. Don't reintroduce a single hardcoded
+destination: a skill installed for one agent and invisible to the next is the
+exact failure the registry exists to prevent, and `skill list` prints a mark per
+target for the same reason.
+
+Three skills ship, one per
 judgement-heavy step: `profile-review` (pairs with `profile/review.py`),
 `capability-plan` (pairs with `capability/recommender.py`), and
 `c4-component-diagram` (pairs with nothing — see below). The split with those
@@ -263,10 +281,11 @@ invocation — those are the strings that would rot silently here.
 
 A new skill needs an
 entry in `SKILLS` and a tuple in `packaging/acsdd.spec`'s `datas`; the `skill`
-command group is generic over `SKILLS` and needs nothing. `remove_skill` mirrors
-`install_skill` down to reporting a no-op through its result rather than
-raising; it cleans up the emptied `.claude/skills/<name>/` but never
-`.claude/skills/` itself, which hosts other tools' skills too.
+command group is generic over `SKILLS` and `AGENT_TARGETS` and needs nothing.
+`remove_skill` mirrors `install_skill` down to reporting a no-op through its
+result rather than raising; it cleans up the emptied `<root>/<name>/` but never
+`.agents/skills/` or `.claude/skills/` themselves, which host other tools'
+skills too.
 
 **`removal.py`** — `remove_paths(paths, protect=...)`, the one deletion
 primitive, shared by all three `remove` commands. *What* to delete is answered
@@ -303,8 +322,8 @@ update both.
 
 **Packaged data files** — two packages ship non-Python files: `schemas/` (the
 two JSON Schemas, loaded via
-`importlib.resources.files("acsdd.schemas")`) and `assets/` (the Claude Code
-skills, loaded via `importlib.resources.files("acsdd.assets")`). Neither is
+`importlib.resources.files("acsdd.schemas")`) and `assets/` (the agent skills,
+loaded via `importlib.resources.files("acsdd.assets")`). Neither is
 ever addressed by a relative filesystem path or one derived from `__file__`.
 
 Any new file in either must be registered in **both**
