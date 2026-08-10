@@ -231,6 +231,12 @@ re-run `catalog build` any time you add, version, or deprecate one. Wire
 `acsdd catalog verify` into CI (see [`acsdd catalog`](#acsdd-catalog) below)
 so a stale catalog or an invalid manifest fails the build automatically.
 
+That's onboarding done. From here the work is per-change rather than per-repo,
+and `acsdd skill install` ships one more skill for it: **`c4-component-diagram`**
+turns a PRD or implementation plan into a C4 Component diagram of what the
+change actually touches — which components are new, which have to be modified,
+which go away — written to `docs/architecture/` before implementation starts.
+
 ## Keeping capabilities in step with the profile
 
 A profile is not a one-time artifact. You upgrade a library, re-run
@@ -385,7 +391,8 @@ acsdd skill remove profile-review --force   # uninstall it again
 ```
 
 Installs the [Claude Code](https://claude.com/claude-code) skills acsdd ships
-into a repository. Currently two, one per judgement-heavy step of the workflow:
+into a repository. Currently three, one per judgement-heavy step of the
+workflow:
 
 - **`profile-review`** — resolves a draft profile's `[REVIEW REQUIRED]` fields
   by investigating the repo, proposing a value per field with evidence, waiting
@@ -393,10 +400,18 @@ into a repository. Currently two, one per judgement-heavy step of the workflow:
 - **`capability-plan`** — decides which capabilities the finished profile
   implies, checks each candidate against your actual code, and updates the
   manifests a profile change has left stale.
+- **`c4-component-diagram`** — reads a PRD or implementation plan against your
+  repo and writes a C4 Component diagram of the architectural impact into
+  `docs/architecture/`, classifying every component as new, modified, removed,
+  or merely involved.
 
-Both drive themselves off the matching command's `--json` output
+The first two drive themselves off the matching command's `--json` output
 (`acsdd profile review --json`, `acsdd capability recommend --json`) rather than
 restating what the CLI knows, so neither goes stale when detection changes.
+`c4-component-diagram` has no CLI partner — C4-PlantUML's conventions come from
+outside acsdd and don't move when detection does — but it still reads a
+finalized profile's `technology_stack` when there is one, and works in repos
+that have never seen acsdd.
 
 Installing is explicit and opt-in — `profile discover` never writes outside
 `./.acsdd/profiles`, and `.claude/` belongs to a different tool and is often

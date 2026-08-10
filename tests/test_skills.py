@@ -36,6 +36,18 @@ def test_capability_plan_asset_loads_via_importlib_resources():
     assert "acsdd capability recommend --json" in content
 
 
+def test_c4_component_diagram_asset_loads_via_importlib_resources():
+    content = read_skill("c4-component-diagram")
+    assert content.startswith("---\n")
+    # This skill has no --json partner to keep it honest (see the note in
+    # acsdd/skills.py), so the strings that would rot silently are the
+    # C4-PlantUML include and the four status tags the whole classification
+    # scheme is built on.
+    assert "!include <C4/C4_Component>" in content
+    for tag in ("new", "modified", "related", "removed"):
+        assert f'AddElementTag("{tag}"' in content
+
+
 def test_unknown_skill_raises_with_the_available_names():
     with pytest.raises(SkillError) as exc:
         read_skill("does-not-exist")
@@ -116,11 +128,13 @@ def test_skill_list_shows_shipped_skills_and_install_state(tmp_path):
     assert "[ ] profile-review" in before.output
 
     assert "[ ] capability-plan" in before.output
+    assert "[ ] c4-component-diagram" in before.output
 
     runner.invoke(cli, ["skill", "install", "--dir", str(tmp_path)])
     after = runner.invoke(cli, ["skill", "list", "--dir", str(tmp_path)])
     assert "[x] profile-review" in after.output
     assert "[x] capability-plan" in after.output
+    assert "[x] c4-component-diagram" in after.output
 
 
 def test_skill_show_dumps_the_markdown():

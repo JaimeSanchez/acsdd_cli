@@ -6,6 +6,11 @@ agent rather than a CLI. The skills here are that agent-facing half — procedur
 only, with all per-field knowledge left in acsdd.profile.review so the two can't
 drift.
 
+`c4-component-diagram` is the deliberate exception: it has no CLI partner and
+carries its own domain knowledge, because C4-PlantUML's macros and the status
+colour standard come from outside this repo and don't move when acsdd's
+detectors do. There'd be nothing for a Python table to own.
+
 Assets are read through importlib.resources, never a path relative to
 ``__file__``, so they resolve the same way from a source install and from the
 frozen PyInstaller binary. Any new file added under ``acsdd/assets/`` must be
@@ -65,6 +70,13 @@ SKILLS: Dict[str, SkillAsset] = {
         dest=PurePosixPath(".claude/skills/capability-plan/SKILL.md"),
         summary=("Decide which capabilities this repo should have, and update the "
                  "manifests a profile change left behind."),
+    ),
+    "c4-component-diagram": SkillAsset(
+        name="c4-component-diagram",
+        resource="claude/skills/c4-component-diagram/SKILL.md",
+        dest=PurePosixPath(".claude/skills/c4-component-diagram/SKILL.md"),
+        summary=("Diagram the architectural impact of a planned change: what's "
+                 "new, modified, removed, or merely involved."),
     ),
 }
 

@@ -238,14 +238,30 @@ fails if manifests and catalog have drifted, or if any manifest is invalid.
 **`skills.py` + `assets/`** — backs `acsdd skill list/install/show/remove`,
 which copies the Claude Code skills acsdd ships into a consumer repo's
 `.claude/skills/`. `assets/claude/skills/<name>/SKILL.md` mirrors the
-destination layout so installing is a straight copy. Two skills ship, one per
-judgement-heavy step: `profile-review` (pairs with `profile/review.py`) and
-`capability-plan` (pairs with `capability/recommender.py`). The split with those
+destination layout so installing is a straight copy. Three skills ship, one per
+judgement-heavy step: `profile-review` (pairs with `profile/review.py`),
+`capability-plan` (pairs with `capability/recommender.py`), and
+`c4-component-diagram` (pairs with nothing — see below). The split with those
 modules is deliberate and worth preserving: **domain knowledge lives in the
 Python table, procedure lives in `SKILL.md`.** Each skill drives itself off its
 partner's `--json` output — `acsdd profile review --json`, `acsdd capability
 recommend --json` — rather than restating detection facts or rule tables in
-prose, which would go stale the first time either changed. A new skill needs an
+prose, which would go stale the first time either changed.
+
+`c4-component-diagram` is the one exception, and it's a considered one rather
+than an oversight: its domain knowledge is C4-PlantUML's macros and the
+NEW/MODIFIED/RELATED/REMOVED colour standard, which originate outside this repo
+and don't move when acsdd's detectors do, so there is nothing for a Python table
+to own and no `--json` command to write. It reads a finalized profile's
+`technology_stack` when one exists and degrades silently to code inspection when
+it doesn't — the coupling is opportunistic, never required. Don't "fix" it by
+inventing a backing module; do keep it out of `capability recommend`'s way,
+since capabilities describe what an agent may *do* and their dependency graph is
+not a component graph. Its test in `tests/test_skills.py` therefore asserts the
+`!include <C4/C4_Component>` line and the four tag names rather than a `--json`
+invocation — those are the strings that would rot silently here.
+
+A new skill needs an
 entry in `SKILLS` and a tuple in `packaging/acsdd.spec`'s `datas`; the `skill`
 command group is generic over `SKILLS` and needs nothing. `remove_skill` mirrors
 `install_skill` down to reporting a no-op through its result rather than

@@ -88,7 +88,11 @@ jobs:
           # with pyproject's package-data, this is what catches it.
           TMPREPO=$(mktemp -d)
           ./dist/acsdd-${{ matrix.target }} skill install --dir "$TMPREPO"
-          test -s "$TMPREPO/.claude/skills/profile-review/SKILL.md"
+          # One check per shipped skill: `skill install` already exits 1 on a
+          # missing asset, but naming them makes the failure say which one.
+          for s in profile-review capability-plan c4-component-diagram; do
+            test -s "$TMPREPO/.claude/skills/$s/SKILL.md"
+          done
 
       - name: Checksum
         # Compute from inside dist/ so the checksum file records the bare
