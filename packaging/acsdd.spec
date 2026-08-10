@@ -31,6 +31,11 @@ datas = [
                      "profile-review", "SKILL.md"),
         "acsdd/assets/claude/skills/profile-review",
     ),
+    (
+        os.path.join(repo_root, "src", "acsdd", "assets", "claude", "skills",
+                     "capability-plan", "SKILL.md"),
+        "acsdd/assets/claude/skills/capability-plan",
+    ),
 ]
 datas += collect_data_files("jsonschema_specifications")
 

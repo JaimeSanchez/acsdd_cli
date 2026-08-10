@@ -1,7 +1,7 @@
 """acsdd — command-line tool for the ACSDD framework.
 
 Subcommand groups:
-  acsdd capability   validate / list / show / generate / remove
+  acsdd capability   validate / list / show / generate / recommend / remove
   acsdd catalog      build / verify
   acsdd profile      discover / validate / create / review / remove
   acsdd skill        list / install / show / remove
@@ -502,6 +502,186 @@ def capability_generate(profile_path: Optional[Path], cap_id: str, category: str
     click.echo("  4. acsdd catalog build")
 
 
+@capability.command("recommend")
+@click.option("--profile", "profile_path", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Path to a profile YAML (default: auto-detected single profile under ./.acsdd/profiles).")
+@click.option("--capabilities-dir", type=click.Path(path_type=Path), default=None,
+              help="Root capabilities directory (default: auto-detected).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit the report as JSON on stdout (what the capability-plan skill consumes).")
+def capability_recommend(profile_path: Optional[Path], capabilities_dir: Optional[Path],
+                          as_json: bool):
+    """Suggest the capability set this profile implies, and flag drift.
+
+    `capability generate` presumes you already know which capabilities your
+    repo should have. This answers that: it maps the profile's traits (an ORM
+    is configured, a frontend exists, a test framework was detected) onto the
+    capabilities a repo with those traits wants, and marks each as already
+    covered or still missing.
+
+    Re-run it after any profile change. A profile is not a one-time artifact —
+    when a library upgrade moves technology_stack, the manifests written
+    against the old profile keep asserting constraints and quality gates that
+    stopped being true, and the second half of this report is what surfaces
+    them.
+
+    Informational, not a gate: gaps and drift are its expected input, so it
+    exits 0 on both. Exit 1 is reserved for real failures (no profile found,
+    unparseable YAML).
+    """
+    import json as _json
+    import yaml as _yaml
+
+    from acsdd.capability.recommender import recommend
+
+    if profile_path is None:
+        profile_path = _default_profile_path()
+        if profile_path is None:
+            click.secho(
+                "ERROR: no --profile given and couldn't auto-detect one under ./.acsdd/profiles.",
+                fg="red",
+            )
+            click.echo("Run `acsdd profile discover .` first, or pass --profile explicitly.")
+            sys.exit(1)
+        # Chatter goes to stderr so --json keeps stdout to the payload alone.
+        click.echo(f"No --profile given, using: {profile_path}", err=as_json)
+
+    try:
+        data = _yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
+    except _yaml.YAMLError as exc:
+        click.secho(f"ERROR: {profile_path} is not parseable YAML:", fg="red")
+        click.echo(f"  - {exc}")
+        sys.exit(1)
+
+    capabilities_dir = capabilities_dir or _default_capabilities_dir()
+    manifests_dir = capabilities_dir / MANIFESTS_SUBDIR
+    try:
+        manifests = list(iter_manifests(manifests_dir)) if manifests_dir.is_dir() else []
+    except ManifestLoadError as exc:
+        click.secho(f"ERROR: {exc}", fg="red")
+        sys.exit(1)
+
+    report = recommend(data.get("profile", {}) or {}, manifests)
+
+    if as_json:
+        payload = {
+            "acsdd_version": __version__,
+            "profile_path": str(profile_path),
+            "capabilities_dir": str(capabilities_dir),
+            **report.to_dict(),
+        }
+        click.echo(_json.dumps(payload, indent=2, sort_keys=False))
+        return
+
+    _print_recommendations(report)
+    _print_stale(report)
+
+    click.echo("Next:")
+    if report.missing:
+        first = report.missing[0]
+        click.echo(f"  1. {first.generate_command}   (and the rest above)")
+        click.echo("  2. fill in name/description/inputs/outputs in each manifest")
+        click.echo("  3. acsdd capability validate && acsdd catalog build")
+    elif report.stale:
+        click.echo("  1. update the stale fields above in each manifest")
+        click.echo("  2. acsdd capability validate && acsdd catalog build")
+    else:
+        click.echo("  nothing — the capability set matches the profile.")
+
+    # Contextual, not part of the onboarding checklist: only surface the skill
+    # to someone who has work it could do and hasn't already installed it.
+    if (report.missing or report.stale) and not is_installed("capability-plan", Path.cwd()):
+        click.echo()
+        click.secho(
+            "Tip: `acsdd skill install` drops a Claude Code skill into this repo "
+            "that can do steps 1-2 for you.",
+            dim=True,
+        )
+
+
+def _print_recommendations(report) -> None:
+    """Recommendations grouped by category, gaps first within each group."""
+    import textwrap
+
+    if not report.recommended:
+        click.secho("No capabilities recommended — the profile carries too few "
+                    "resolved fields to infer anything.", fg="yellow")
+        click.echo("Resolve it with `acsdd profile review`, then re-run this.\n")
+        return
+
+    click.secho(
+        f"{len(report.missing)} capability gap(s), "
+        f"{len(report.recommended) - len(report.missing)} already covered.",
+        bold=True,
+    )
+    click.echo()
+
+    by_category: Dict[str, list] = {}
+    for rec in report.recommended:
+        by_category.setdefault(rec.category, []).append(rec)
+
+    for category, entries in by_category.items():
+        click.secho(f"{category}", fg="cyan", bold=True)
+        for rec in sorted(entries, key=lambda r: r.status != "missing"):
+            if rec.status == "covered":
+                click.secho(f"  [x] {rec.name}", fg="green")
+                click.echo(f"        covered by {', '.join(rec.covered_by)}")
+                continue
+            click.secho(f"  [ ] {rec.suggested_id}  {rec.name}", fg="yellow")
+            click.echo(textwrap.fill(rec.why, width=78,
+                                     initial_indent=" " * 8, subsequent_indent=" " * 8))
+            if rec.depends_on:
+                click.echo(f"        depends on: {', '.join(rec.depends_on)}")
+            for note in rec.blocked_by:
+                click.echo(textwrap.fill(f"blocked: {note}", width=78,
+                                         initial_indent=" " * 8,
+                                         subsequent_indent=" " * 17))
+        click.echo()
+
+
+def _print_stale(report) -> None:
+    """Drift first, then advisories — collapsed, since an identical advisory
+    across every manifest is one decision, not N."""
+    import textwrap
+
+    if report.stale:
+        # One library upgrade lands the identical finding on every manifest
+        # that pinned it. Printing it per manifest turns a three-line answer
+        # into a wall; the JSON keeps the per-manifest granularity that a
+        # consumer editing files actually needs.
+        groups: Dict[tuple, list] = {}
+        for entry in report.stale:
+            groups.setdefault(
+                (entry.field, entry.manifest_value, entry.profile_value, entry.fix),
+                [],
+            ).append(entry.id)
+
+        affected = {entry.id for entry in report.stale}
+        click.secho(
+            f"{len(groups)} stale field(s) across {len(affected)} manifest(s) — "
+            "the profile has moved past these:",
+            fg="red", bold=True,
+        )
+        for (field_name, manifest_value, profile_value, fix), ids in groups.items():
+            click.secho(f"  {field_name}  ({', '.join(ids)})", fg="yellow")
+            click.echo(f"        manifest: {manifest_value}")
+            click.echo(f"        profile:  {profile_value}")
+            click.echo(textwrap.fill(fix, width=78,
+                                     initial_indent=" " * 8 + "fix: ",
+                                     subsequent_indent=" " * 13))
+        click.echo()
+
+    if report.advisories:
+        grouped: Dict[str, list] = {}
+        for advisory in report.advisories:
+            grouped.setdefault(advisory.why, []).append(advisory.id)
+        click.secho("Advisories (never blocking):", fg="yellow")
+        for why, ids in grouped.items():
+            click.echo(textwrap.fill(f"{', '.join(ids)} — {why}", width=78,
+                                     initial_indent="  - ", subsequent_indent=" " * 4))
+        click.echo()
+
+
 @capability.command("remove")
 @click.argument("capability_id")
 @click.option("--capabilities-dir", type=click.Path(path_type=Path), default=None,
@@ -745,7 +925,10 @@ def profile_create(draft_path: Optional[Path], output: Optional[Path], force: bo
         encoding="utf-8",
     )
     click.secho(f"Wrote {output}", fg="green")
-    click.echo(f"Next step: acsdd capability generate --profile {output} --id ID --category CAT")
+    # Points at `recommend` rather than straight at `generate`: knowing *which*
+    # capabilities this repo wants is the question a freshly finalized profile
+    # can now answer, and generate can't be run without that answer.
+    click.echo(f"Next step: acsdd capability recommend --profile {output}")
 
 
 @profile.command("validate")

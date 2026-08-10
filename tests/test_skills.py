@@ -28,6 +28,14 @@ def test_skill_asset_loads_via_importlib_resources():
     assert "acsdd profile review --json" in content
 
 
+def test_capability_plan_asset_loads_via_importlib_resources():
+    content = read_skill("capability-plan")
+    assert content.startswith("---\n")
+    # Each skill drives itself off its own --json command rather than restating
+    # what the CLI knows; losing that line is how a skill starts going stale.
+    assert "acsdd capability recommend --json" in content
+
+
 def test_unknown_skill_raises_with_the_available_names():
     with pytest.raises(SkillError) as exc:
         read_skill("does-not-exist")
@@ -45,6 +53,14 @@ def test_skill_frontmatter_is_wellformed(name):
     # Third-person and trigger-rich — this text is what decides whether the
     # skill ever fires.
     assert "Use when" in parsed["description"]
+
+
+def test_install_writes_every_shipped_skill_into_the_repo(tmp_path):
+    for name in SKILLS:
+        result = install_skill(name, tmp_path)
+        assert result.written is True
+        assert result.path == tmp_path / ".claude" / "skills" / name / "SKILL.md"
+        assert result.path.read_text() == read_skill(name)
 
 
 def test_install_writes_the_skill_into_the_repo(tmp_path):
@@ -99,9 +115,12 @@ def test_skill_list_shows_shipped_skills_and_install_state(tmp_path):
         assert name in before.output
     assert "[ ] profile-review" in before.output
 
+    assert "[ ] capability-plan" in before.output
+
     runner.invoke(cli, ["skill", "install", "--dir", str(tmp_path)])
     after = runner.invoke(cli, ["skill", "list", "--dir", str(tmp_path)])
     assert "[x] profile-review" in after.output
+    assert "[x] capability-plan" in after.output
 
 
 def test_skill_show_dumps_the_markdown():

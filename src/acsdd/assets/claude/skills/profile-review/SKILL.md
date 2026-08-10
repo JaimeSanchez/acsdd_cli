@@ -112,8 +112,12 @@ Propose `acsdd profile create` and run it only on an explicit yes. On success,
 report the written path and the next step:
 
 ```bash
-acsdd capability generate --id ID --category CAT
+acsdd capability recommend
 ```
+
+That answers which capabilities the finished profile implies — the question
+`acsdd capability generate` assumes you have already answered. The packaged
+`capability-plan` skill drives it.
 
 ## Constraints
 

@@ -142,7 +142,7 @@ CI, never this.
 If you use Claude Code, you can hand the whole step over:
 
 ```bash
-acsdd skill install     # writes .claude/skills/profile-review/SKILL.md
+acsdd skill install profile-review   # writes .claude/skills/profile-review/SKILL.md
 ```
 
 Then ask Claude Code to *"finish my ACSDD profile"*. It reads the same JSON
@@ -166,12 +166,34 @@ profile. Once it's clean, it writes the finalized profile as
 `./.acsdd/profiles/my-project.yaml` (`status: active`, version bumped to
 `1.0.0`) — this is the file to point at everything downstream from here.
 
-**6. Generate a capability manifest from that profile.** Do this once per
-capability you want to define (an `AI-Collaborative` "unit of work" your
-repo supports, like "run database migrations" or "generate an API
-controller"). Pick an id (`<2-4 letter category>-<3 digits>`, e.g. `BE-001`)
-and a category (`PLAN`, `PROFILE`, `DB`, `BE`, `FE`, `TEST`, `DOC`,
-`DEVOPS`, `SEC`, `REF`):
+**6. Ask which capabilities this profile implies:**
+
+```bash
+acsdd capability recommend
+```
+
+A capability is an `AI-Collaborative` "unit of work" your repo supports, like
+"run database migrations" or "generate an API controller" — and picking the
+right set is the step nothing else in the tool helped with. This maps the
+profile's traits (an ORM is configured, a frontend exists, a test framework
+was detected) onto the capabilities a repo with those traits wants, marks each
+as already covered or still missing, and hands you a ready-to-run `generate`
+command with an unused id for each gap. Informational, not a gate: it exits 0
+whatever it finds.
+
+**Re-run it after any profile change** — it is also the drift check. See
+[Keeping capabilities in step with the profile](#keeping-capabilities-in-step-with-the-profile)
+below.
+
+If you use Claude Code, `acsdd skill install` also ships a `capability-plan`
+skill for this step: it reads `acsdd capability recommend --json`, checks each
+recommendation against your actual code, and proposes a set for you to sign off
+on before anything is created.
+
+**7. Generate a capability manifest** — once per capability you accepted. Pick
+an id (`<2-4 letter category>-<3 digits>`, e.g. `BE-001`) and a category
+(`PLAN`, `PROFILE`, `DB`, `BE`, `FE`, `TEST`, `DOC`, `DEVOPS`, `SEC`, `REF`),
+or just run the command `recommend` printed:
 
 ```bash
 acsdd capability generate --id BE-001 --category BE
@@ -188,7 +210,7 @@ specific capability — name, description, concrete inputs/outputs — as
 `[REVIEW REQUIRED]` placeholders. Fill those in yourself, or hand the draft
 manifest + your codebase to an AI coding agent and ask it to complete them.
 
-**7. Validate the manifest, then rebuild the catalog:**
+**8. Validate the manifest, then rebuild the catalog:**
 
 ```bash
 acsdd capability validate
@@ -196,10 +218,47 @@ acsdd catalog build
 ```
 
 `acsdd catalog build` regenerates `.acsdd/capabilities/CATALOG.md` from every
-manifest under `_manifests/` — repeat steps 6-7 for each new capability, and
+manifest under `_manifests/` — repeat steps 7-8 for each new capability, and
 re-run `catalog build` any time you add, version, or deprecate one. Wire
 `acsdd catalog verify` into CI (see [`acsdd catalog`](#acsdd-catalog) below)
 so a stale catalog or an invalid manifest fails the build automatically.
+
+## Keeping capabilities in step with the profile
+
+A profile is not a one-time artifact. You upgrade a library, re-run
+`acsdd profile discover`, and `technology_stack` moves — but the manifests
+written against the *old* profile keep asserting the old constraints and the
+old quality gates. Those two fields are exactly what an AI agent reads to
+decide how to execute a capability, so a manifest still pinning
+`doctrine/orm:^2.6` on a Doctrine 3 codebase is worse than no manifest at all.
+
+`acsdd capability recommend` is the join that catches it. Run it after any
+profile change:
+
+```bash
+acsdd profile discover .      # picks up the upgrade
+acsdd capability recommend    # gaps *and* drift
+```
+
+It reports two kinds of finding. **Stale fields** are manifest values the
+profile has moved past — a `profile_constraints` entry on a superseded major
+version, an `adapters[].stack` the profile no longer targets, a quality gate
+naming a tool the repo replaced. **Advisories** are never blocking: a gate the
+profile runs that a manifest doesn't declare is usually a deliberate authoring
+choice, so it is raised and never treated as drift.
+
+Drift detection is deliberately quiet where it can't be certain. It compares
+only constraint keys the profile can actually speak to (both the
+`orm:doctrine` convention `capability generate` writes and the
+`doctrine/orm:^2.6` package convention hand-written manifests use), and it
+compares versions by **major component only** — `^2.6` against `2.6.4` is not
+drift, `^2.6` against `^3.6` is. A report that cries wolf on an unchanged repo
+is one nobody reads.
+
+Fix stale fields by **editing the manifest in place**. Never re-run
+`capability generate --force` to "refresh" it: that regenerates the whole file
+from the profile and discards the hand-written name, description, inputs, and
+outputs.
 
 ## Commands
 
@@ -213,6 +272,8 @@ acsdd capability list --category DB       # filtered
 acsdd capability show DB-004              # full manifest + resolved dependency chain
 acsdd capability generate --id BE-005 --category BE   # --profile defaults to ./.acsdd/profiles
 acsdd capability generate --profile P --id BE-005 --category BE  # or set it explicitly
+acsdd capability recommend                # which capabilities this profile implies + drift
+acsdd capability recommend --json         # same, machine-readable
 acsdd capability remove BE-005            # list what would go (nothing is deleted)
 acsdd capability remove BE-005 --force    # actually delete it
 ```
@@ -224,6 +285,13 @@ acsdd capability remove BE-005 --force    # actually delete it
 2. **Cross-manifest integrity** — every `dependencies[].capability`
    reference actually resolves to a manifest in the set, no capability
    depends on itself, and there are no circular dependency chains.
+
+`recommend` is the step before `generate`: it answers *which* capabilities this
+repo should have, which `generate` presumes you already know. It also reports
+manifests the profile has outgrown — see
+[Keeping capabilities in step with the profile](#keeping-capabilities-in-step-with-the-profile).
+Like `profile review`, it is informational and always exits 0; don't wire it
+into CI as a gate.
 
 `remove` is the inverse of `generate`: it deletes both files that command
 wrote — the manifest and the procedure doc — and then regenerates `CATALOG.md`
@@ -309,9 +377,18 @@ acsdd skill remove profile-review --force   # uninstall it again
 ```
 
 Installs the [Claude Code](https://claude.com/claude-code) skills acsdd ships
-into a repository. Currently one: `profile-review`, which resolves a draft
-profile's `[REVIEW REQUIRED]` fields by investigating the repo, proposing a
-value per field with evidence, waiting for your sign-off, then finalizing.
+into a repository. Currently two, one per judgement-heavy step of the workflow:
+
+- **`profile-review`** — resolves a draft profile's `[REVIEW REQUIRED]` fields
+  by investigating the repo, proposing a value per field with evidence, waiting
+  for your sign-off, then finalizing.
+- **`capability-plan`** — decides which capabilities the finished profile
+  implies, checks each candidate against your actual code, and updates the
+  manifests a profile change has left stale.
+
+Both drive themselves off the matching command's `--json` output
+(`acsdd profile review --json`, `acsdd capability recommend --json`) rather than
+restating what the CLI knows, so neither goes stale when detection changes.
 
 Installing is explicit and opt-in — `profile discover` never writes outside
 `./.acsdd/profiles`, and `.claude/` belongs to a different tool and is often
@@ -349,7 +426,7 @@ acsdd-cli/
 │   ├── skills.py                  # installs the shipped Claude Code skills
 │   ├── schemas/                   # Appendix A & B JSON Schemas
 │   ├── assets/                    # files installed into a consumer repo (skills)
-│   ├── capability/                # manifest loading + validation + generation
+│   ├── capability/                # manifest loading + validation + generation + recommendation
 │   ├── catalog/                   # CATALOG.md generation
 │   └── profile/                   # repo discovery + profile review/validation/finalization
 ├── tests/                         # pytest suite

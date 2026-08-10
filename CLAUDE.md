@@ -40,9 +40,15 @@ acsdd profile review    # what's still [REVIEW REQUIRED], and how to resolve it
 # (both --draft below and --profile further down default to whatever's
 # under ./.acsdd/profiles — spelled out here only for clarity)
 acsdd profile create --draft .acsdd/profiles/my-project-draft.yaml
+acsdd capability recommend   # which capabilities this profile implies, + drift
 acsdd capability generate --id BE-001 --category BE
 
-# Install the packaged Claude Code skill that automates the review step
+# Re-run after any profile change (a library upgrade, a fresh discover): the
+# same command reports manifests whose constraints/gates the profile outgrew.
+acsdd capability recommend
+
+# Install the packaged Claude Code skills that automate the two judgement
+# steps (profile-review, capability-plan)
 acsdd skill install
 
 # Undo any of the above. Every `remove` lists what it would delete and does
@@ -132,6 +138,31 @@ command, since a finalized profile by definition has nothing left to review.
   `capability_configuration.default_adapter` — everywhere else it's written
   by `profile discover` and never consumed, a naming convention rather than
   an enforced link.
+- `recommender.py`: `recommend`/`find_stale` — backs `acsdd capability
+  recommend`, which answers the question `generate` presumes you've already
+  answered ("which capabilities should this repo have?") and, on every run
+  after the first, which manifests the profile has outgrown. Same construction
+  as `profile/review.py` and for the same reasons: a static table
+  (`_TEMPLATES`, keyed on profile *traits* rather than per-stack catalogs) plus
+  dict probes, no detector re-run, no filesystem access — `recommend` takes the
+  profile sub-dict and `iter_manifests` output and touches nothing else.
+  `requires` vs `gate_hints` is the load-bearing distinction: an unmet
+  `requires` drops the template entirely, an unmet `gate_hint` keeps it and
+  attaches a `blocked_by` note. A React repo with no test runner must be *told*
+  it has no test runner, not quietly served a shorter list.
+  **Two rules keep the drift half trustworthy, and both exist to avoid false
+  positives — a report that cries wolf is one nobody reads.** Constraint keys
+  the profile can't resolve are ignored outright (manifests carry both
+  `orm:doctrine`, which `generator.py` writes, and `doctrine/orm:^2.6`, which
+  the hand-written examples use; a key from neither is nobody's business).
+  Versions compare by **major component only** — `^2.6` vs `2.6.4` is not
+  drift, `^2.6` vs `^3.6` is. A gate the profile runs that a manifest omits is
+  an *advisory*, never stale: `DB-004` drops the `static-analysis:` gate
+  deliberately. Coverage matching is keyword-based against manifest names for
+  the same reason `builder.find_doc_file` greps doc content — nothing records
+  which template a manifest came from, and a schema field to record it would
+  make every hand-written manifest look untracked. Because that match is fuzzy,
+  the report always carries `existing_by_category` so the reader can overrule it.
 - `remover.py`: `plan_removal`/`find_dependents` — works out what `acsdd
   capability remove` would delete and what it would break, without deleting
   anything (that's `removal.remove_paths`). It finds the procedure doc via
@@ -207,11 +238,16 @@ fails if manifests and catalog have drifted, or if any manifest is invalid.
 **`skills.py` + `assets/`** — backs `acsdd skill list/install/show/remove`,
 which copies the Claude Code skills acsdd ships into a consumer repo's
 `.claude/skills/`. `assets/claude/skills/<name>/SKILL.md` mirrors the
-destination layout so installing is a straight copy. The split with `review.py`
-is deliberate and worth preserving: **per-field knowledge lives in `review.py`,
-procedure lives in `SKILL.md`.** The skill drives itself off
-`acsdd profile review --json` rather than restating detection facts in prose,
-which would go stale the first time a detector changed. `remove_skill` mirrors
+destination layout so installing is a straight copy. Two skills ship, one per
+judgement-heavy step: `profile-review` (pairs with `profile/review.py`) and
+`capability-plan` (pairs with `capability/recommender.py`). The split with those
+modules is deliberate and worth preserving: **domain knowledge lives in the
+Python table, procedure lives in `SKILL.md`.** Each skill drives itself off its
+partner's `--json` output — `acsdd profile review --json`, `acsdd capability
+recommend --json` — rather than restating detection facts or rule tables in
+prose, which would go stale the first time either changed. A new skill needs an
+entry in `SKILLS` and a tuple in `packaging/acsdd.spec`'s `datas`; the `skill`
+command group is generic over `SKILLS` and needs nothing. `remove_skill` mirrors
 `install_skill` down to reporting a no-op through its result rather than
 raising; it cleans up the emptied `.claude/skills/<name>/` but never
 `.claude/skills/` itself, which hosts other tools' skills too.
@@ -318,7 +354,8 @@ the latest GitHub release.
 
 Tests live in `tests/`, generally one file per package (`test_capability.py`,
 `test_profile.py`, `test_discovery.py`, `test_capability_generator.py`,
-`test_profile_generator.py`, `test_profile_review.py`, `test_paths.py`,
+`test_profile_generator.py`, `test_profile_review.py`,
+`test_capability_recommend.py`, `test_paths.py`,
 `test_skills.py`, `test_update.py`), plain `pytest` functions (no
 test classes). `test_update.py` monkeypatches `is_frozen_binary`/
 `detect_platform`/`_download` rather than hitting the network or a real
@@ -336,7 +373,7 @@ no-`--force` test must assert the files are **still on disk** afterwards, not
 just that the exit code was 1 — a command that prints the refusal *and* deletes
 would pass the weaker assertion.
 
-Two tests are guards rather than coverage, and shouldn't be weakened to make a
+Three tests are guards rather than coverage, and shouldn't be weakened to make a
 change pass:
 
 - `test_discovery.py::test_review_covers_every_placeholder_real_discovery_emits`
@@ -346,6 +383,16 @@ change pass:
 - `test_profile_review.py::test_allowed_values_match_the_json_schema` reads
   `profile.schema.json` and checks the enums `review.py` keeps as plain
   constants still match it.
+- `test_capability_recommend.py::test_every_template_path_resolves_against_a_real_discovered_profile`
+  runs real discovery against **two** fixture repos (a PHP one and a JS one)
+  and asserts every profile path `recommender.py`'s `_TEMPLATES` keys off is
+  one discovery still emits. Two repos because several stack fields are
+  conditionally omitted — `technology_stack.frontend` only appears once there
+  is a frontend — and a single-repo version would declare those fields dead. A
+  renamed profile field otherwise makes a trait silently stop firing, with
+  nothing failing and the recommendations quietly getting worse.
+  `test_templates_stay_consistent_with_the_schemas` is its cheaper sibling
+  (categories ⊆ the schema enum, `depends_on` resolves to a real slug).
 
 `test_skills.py` covers the packaged-asset load path for the *source* install
 only; the frozen half can't be tested from pytest and is asserted by
